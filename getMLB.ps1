@@ -58,7 +58,7 @@ if ($mlb_games.totalGames) {
     $mlb_gamekey = $mlb_games.dates.games.gamePk
 }
 
-# Get initial timestamp from diffPatch so we're not polling the entire data set until it updates
+# Get initial timestamp from diffPatch so we're not polling the entire data set until it changes
 $diffPatch = Invoke-RestMethod -Uri $URI_diffPatch
 $startTime = $diffPatch.metaData.timeStamp
 
@@ -307,7 +307,7 @@ function publishLinescore ([string]$gameKey,[string]$outputfile) {
         $startTime = $newTime
 
         # Check whether the game is over
-        $URI_live = "https://statsapi.mlb.com/api/v1.1/game/"+$mlb_gamekey+"/feed/live/"
+        $URI_live = "https://statsapi.mlb.com/api/v1.1/game/"+$gameKey+"/feed/live/"
         $live = Invoke-RestMethod -Uri $URI_live
     } while ($live.gameData.status.abstractGameState -ne "Final")
 }
