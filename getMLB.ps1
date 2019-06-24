@@ -1,6 +1,4 @@
-$filePath =  "C:\Users\yt\Documents\Twitch Assets\mlbscore.txt"
-$delimiter = [char]0x2502
-
+# Teams table for later reference
 $LAA = 108
 $ARI = 109
 $BAL = 110
@@ -32,26 +30,37 @@ $MIA = 146
 $NYY = 147
 $MIL = 148
 
+# The data that sets the wheels into motion - team and date
 $teamID = $NYM
 $MLB_today = Get-Date -format "MM/dd/yyyy"
 
+# Local file to write to. Currently, script also writes to the console for debugging purposes
+$filePath =  "C:\Users\yt\Documents\Twitch Assets\mlbscore.txt"
+
+# Choose your fighter! This is the unicode box vertical, which is a nice, neat divider
+$delimiter = [char]0x2502
+
+# Get the current gamePk, or game identifier, based on the team and date set above
 $URI_games = "https://statsapi.mlb.com/api/v1/schedule?sportId=1&date="+$MLB_today+"&teamId="+$teamID
 $mlb_games = Invoke-RestMethod -Uri $URI_games
 if ($mlb_games.totalGames) {
     $mlb_gamekey = $mlb_games.dates.games.gamePk
 }
 
+# Set API URIs for later use
 $URI_diffPatch = "https://statsapi.mlb.com/api/v1.1/game/"+$mlb_gamekey+"/feed/live/diffPatch"
 $URI_boxscore  = "https://statsapi.mlb.com/api/v1/game/"+$mlb_gamekey+"/boxscore"
 $URI_linescore = "https://statsapi.mlb.com/api/v1/game/"+$mlb_gamekey+"/linescore"
 $URI_live      = "https://statsapi.mlb.com/api/v1.1/game/"+$mlb_gamekey+"/feed/live/"
 $URI_pbp       = "https://statsapi.mlb.com/api/v1/game/"+$mlb_gamekey+"/playByPlay"
 
-function buildLinescore {
+function buildLinescore { # This is where the magic happens
+    # Grab the API data needed to build the line score
     $mlb_boxscore  = Invoke-RestMethod -Uri $URI_boxscore
     $mlb_linescore = Invoke-RestMethod -Uri $URI_linescore
     $mlb_pbp = Invoke-RestMethod -Uri $URI_pbp
 
+    # Build the front part of the line score
     $abbr_away = $mlb_boxscore.teams.away.team.abbreviation
     $abbr_home = $mlb_boxscore.teams.home.team.abbreviation
     if ($abbr_away.length -lt 3) {
@@ -64,6 +73,7 @@ function buildLinescore {
     $away_record = $mlb_boxscore.teams.away.team.record.winningPercentage
     $home_record = $mlb_boxscore.teams.home.team.record.winningPercentage
 
+    # Capture the RHE data
     $away_runs = $mlb_linescore.teams.away.runs
     $away_hits = $mlb_linescore.teams.away.hits
     $away_errs = $mlb_linescore.teams.away.errors
@@ -72,14 +82,17 @@ function buildLinescore {
     $home_hits = $mlb_linescore.teams.home.hits
     $home_errs = $mlb_linescore.teams.home.errors
 
+    # Build the headers for each row in the line score
     $rowI = "           $delimiter"
     $rowA = "$abbr_away ($away_record) $delimiter"
     $rowH = "$abbr_home ($home_record) $delimiter"
 
+    # ...
     $curr_inning = $mlb_linescore.currentInning
     $sche_inning = $mlb_linescore.scheduledInnings
 
-    for ($i=0; $i -lt $curr_inning; $i++) {
+    # Iterate thru the innings and build the line score
+    for ($i=0; $i -lt $curr_inning; $i++) { # The intent here is to write an X into the home team's final inning if they win a walk-off
         $runsA = $mlb_linescore.innings[$i].away.runs
         #if (($mlb_linescore.teams.home.runs -gt $mlb_linescore.teams.away.runs) -and (-not $mlb_linescore.innings[$i].home.runs) -and (($i+1) -ge $sche_inning) -and ($curr_inning -eq $sche_inning)) {
         #    $runsH = "X"
@@ -168,6 +181,8 @@ function buildLinescore {
     $venue = $mlb_boxscore.teams.home.team.venue.name
     $location = $mlb_boxscore.teams.home.team.locationName
 
+    # Use a Unicode character for "graphics" to indicate top, middle, or bottom of an inning
+    # Any other inning status is blank
     $inningState = switch ($mlb_linescore.inningState) {
         "Top"    {[char]0x2B06}
         "Bottom" {[char]0x2B07}
@@ -180,6 +195,7 @@ function buildLinescore {
     $balls = $mlb_linescore.balls
     $strikes = $mlb_linescore.strikes
 
+    # Use Unicode triangles to indicate bases that are occupied
     if ($MLB_linescore.offense.first) {
         $firstBase = [char]0x25B6
     }
@@ -201,6 +217,7 @@ function buildLinescore {
         $thirdBase = [char]0x25C1
     }
 
+    # Use open and filled circle Unicode characters to indicate outs
     $outs = switch ($mlb_linescore.outs) {
         "0" {[char]0x26AA+""+[char]0x26AA+""+[char]0x26AA}
         "1" {[char]0x26AB+""+[char]0x26AA+""+[char]0x26AA}
@@ -209,10 +226,12 @@ function buildLinescore {
         default {""}
     }
 
+    # Build current inning status line
     $rowS = "$InningState $curr_inning $balls-$strikes $thirdBase$secondBase$firstBase $outs at $venue in $location"
 
     clear-host
 
+    # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats for the current players
     if ($mlb_pbp.currentPlay.result.description) {
         $rowP = $mlb_pbp.currentPlay.result.description
     }
@@ -229,12 +248,14 @@ function buildLinescore {
         $rowP = $mlb_pbp.currentPlay.matchup.pitcher.fullName+" ("+$pitchercurrent.stats.splits.stat.inningsPitched+" IP "+$pitcherhistorical.stats.splits.stat.era+" ERA) pitching to "+$mlb_pbp.currentPlay.matchup.batter.fullName+" ("+$batterhistorical.stats.splits.stat.avg+"/"+$batterhistorical.stats.splits.stat.ops+"/"+$batterhistorical.stats.splits.stat.slg+")"
     }
 
+    # Write line score to the console for debugging
     write-host $rowI
     write-host $rowA
     write-host $rowH
     write-host $rowS
     write-host $rowP
 
+    # Write line score to text file for digestion by external apps
     $rowI | out-file -FilePath $filePath -encoding UTF8
     $rowA | out-file -FilePath $filePath -encoding UTF8 -Append
     $rowH | out-file -FilePath $filePath -encoding UTF8 -Append
@@ -242,20 +263,23 @@ function buildLinescore {
     $rowP | out-file -FilePath $filePath -encoding UTF8 -Append
 }
 
+# Get initial timestamp from diffPatch
 $diffPatch = Invoke-RestMethod -Uri $URI_diffPatch
 $startTime = $diffPatch.metaData.timeStamp
 
-do {
+do { # Run script continuously while game is in session
     buildLinescore
 
-    do {
+    do { # Pause for 5 seconds before polling diffPatch and continue to poll until a new event happens
         Start-Sleep -Second 5
         $URI_newDiff = $URI_diffPatch+"?startTimecode="+$startTime
         $newDiffPatch = Invoke-RestMethod -Uri $URI_newDiff
     } while (!$newDiffPatch)
 
+    # Set most recent updated event timestamp to startTime for next iteration
     $newTime = $newDiffpatch[0].diff[0].value
     $startTime = $newTime
 
+    # Check whether the game is over
     $live = Invoke-RestMethod -Uri $URI_live
 } while ($live.gameData.status.abstractGameState -ne "Final")
