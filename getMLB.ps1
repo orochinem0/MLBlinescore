@@ -1,5 +1,5 @@
 $filePath =  "C:\Users\yt\Documents\Twitch Assets\mlbscore.txt"
-$delimiter = "|"
+$delimiter = [char]0x2502
 
 $LAA = 108
 $ARI = 109
