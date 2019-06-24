@@ -268,7 +268,11 @@ function buildLinescore ([string]$gameKey,[string]$outputfile) { # This is where
         $batterhistorical      = Invoke-RestMethod -Uri $URI_batterhistorical
         $battercurrent         = Invoke-RestMethod -Uri $URI_battercurrent
 
-        $rowP = $mlb_pbp.currentPlay.matchup.pitcher.fullName+" ("+$pitchercurrent.stats.splits.stat.inningsPitched+" IP "+$pitcherhistorical.stats.splits.stat.era+" ERA) pitching to "+$mlb_pbp.currentPlay.matchup.batter.fullName+" ("+$batterhistorical.stats.splits.stat.avg+"/"+$batterhistorical.stats.splits.stat.ops+"/"+$batterhistorical.stats.splits.stat.slg+")"
+        $rowP  = $mlb_pbp.currentPlay.matchup.pitcher.fullName+" ("
+        if ($pitchercurrent.stats.splits.stat.inningsPitched) {
+            $rowP += $pitchercurrent.stats.splits.stat.inningsPitched+" IP "
+        }
+        $rowP += $pitcherhistorical.stats.splits.stat.era+" ERA) pitching to "+$mlb_pbp.currentPlay.matchup.batter.fullName+" ("+$batterhistorical.stats.splits.stat.avg+"/"+$batterhistorical.stats.splits.stat.ops+"/"+$batterhistorical.stats.splits.stat.slg+")"
     }
 
     # Write line score to the console if debugging is enabled
