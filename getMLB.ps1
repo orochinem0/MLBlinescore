@@ -34,8 +34,9 @@ $MIL = 148
 $teamID = $NYM
 $MLB_today = Get-Date -format "MM/dd/yyyy"
 
-# Local file to write to. Currently, script also writes to the console for debugging purposes
+# Local file to write to. Currently, script also writes to the console if debugging is enabled
 $filePath =  "C:\Users\yt\Documents\Twitch Assets\mlbscore.txt"
+$debugOn = true
 
 # Choose your fighter! This is the unicode box vertical, which is a nice, neat divider
 $delimiter = [char]0x2502
@@ -248,12 +249,14 @@ function buildLinescore { # This is where the magic happens
         $rowP = $mlb_pbp.currentPlay.matchup.pitcher.fullName+" ("+$pitchercurrent.stats.splits.stat.inningsPitched+" IP "+$pitcherhistorical.stats.splits.stat.era+" ERA) pitching to "+$mlb_pbp.currentPlay.matchup.batter.fullName+" ("+$batterhistorical.stats.splits.stat.avg+"/"+$batterhistorical.stats.splits.stat.ops+"/"+$batterhistorical.stats.splits.stat.slg+")"
     }
 
-    # Write line score to the console for debugging
-    write-host $rowI
-    write-host $rowA
-    write-host $rowH
-    write-host $rowS
-    write-host $rowP
+    # Write line score to the console if debugging is enabled
+    if ($debugOn) {
+        write-host $rowI
+        write-host $rowA
+        write-host $rowH
+        write-host $rowS
+        write-host $rowP
+    }
 
     # Write line score to text file for digestion by external apps
     $rowI | out-file -FilePath $filePath -encoding UTF8
