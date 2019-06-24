@@ -42,8 +42,9 @@ $delimiter = [char]0x2502
 
 # The data that sets the wheels into motion - team and date
 # You can pick a past date to get a specific game's final outcome
-# However, this is not intended to iterate through a past game
+# However, this code is not intended to iterate through a past game
 # The intended use is to determine the current day and date and let the script iterate over a live game
+# It should stop when the live game is over
 $teamID = $NYM
 $MLB_today = Get-Date -format "MM/dd/yyyy"
 
@@ -62,7 +63,7 @@ $diffPatch = Invoke-RestMethod -Uri $URI_diffPatch
 $startTime = $diffPatch.metaData.timeStamp
 
 function buildLinescore ([string]$gameKey,[string]$outputfile) { # This is where the magic happens
-    # Build URIs for future use
+    # Build URIs
     $URI_boxscore  = "https://statsapi.mlb.com/api/v1/game/"+$gamekey+"/boxscore"
     $URI_linescore = "https://statsapi.mlb.com/api/v1/game/"+$gamekey+"/linescore"
     $URI_pbp       = "https://statsapi.mlb.com/api/v1/game/"+$gamekey+"/playByPlay"
@@ -72,7 +73,7 @@ function buildLinescore ([string]$gameKey,[string]$outputfile) { # This is where
     $mlb_linescore = Invoke-RestMethod -Uri $URI_linescore
     $mlb_pbp       = Invoke-RestMethod -Uri $URI_pbp
 
-    # Start to build the front part of the line score
+    # Start by building the front part of the line score
     $abbr_away = $mlb_boxscore.teams.away.team.abbreviation
     $abbr_home = $mlb_boxscore.teams.home.team.abbreviation
     if ($abbr_away.length -lt 3) {
@@ -95,7 +96,7 @@ function buildLinescore ([string]$gameKey,[string]$outputfile) { # This is where
     $home_hits = $mlb_linescore.teams.home.hits
     $home_errs = $mlb_linescore.teams.home.errors
 
-    # Build the headers for each row in the line score
+    # Build the front for each row in the line score
     $rowI = "           $delimiter"
     $rowA = "$abbr_away ($away_record) $delimiter"
     $rowH = "$abbr_home ($home_record) $delimiter"
@@ -108,7 +109,7 @@ function buildLinescore ([string]$gameKey,[string]$outputfile) { # This is where
     for ($i=0; $i -lt $curr_inning; $i++) { 
         $runsA = $mlb_linescore.innings[$i].away.runs
         #if (($mlb_linescore.teams.home.runs -gt $mlb_linescore.teams.away.runs) -and (-not $mlb_linescore.innings[$i].home.runs) -and (($i+1) -ge $sche_inning) -and ($curr_inning -eq $sche_inning)) {
-        #    $runsH = "X" # The intent here is to write an X into the home team's final inning if they win a walk-off
+        #    $runsH = "X" # NOT WORKING: The intent here is to write an X into the home team's final inning if they win a walk-off
         #}
         #else {
             $runsH = $mlb_linescore.innings[$i].home.runs
@@ -211,8 +212,8 @@ function buildLinescore ([string]$gameKey,[string]$outputfile) { # This is where
 
     # IA IA IA revere and publish the count
     $curr_inning = $mlb_linescore.currentInningOrdinal
-    $balls   = $mlb_linescore.balls
-    $strikes = $mlb_linescore.strikes
+    $balls       = $mlb_linescore.balls
+    $strikes     = $mlb_linescore.strikes
 
     # Use Unicode triangles to indicate bases that are occupied
     # 1st base
@@ -253,7 +254,7 @@ function buildLinescore ([string]$gameKey,[string]$outputfile) { # This is where
 
     clear-host # For visual clarity, duh; only matters if debugging is enabled
 
-    # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats for the current players
+    # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players
     if ($mlb_pbp.currentPlay.result.description) {
         $rowP = $mlb_pbp.currentPlay.result.description
     }
