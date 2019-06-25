@@ -218,34 +218,34 @@ function buildLinescore ([string]$gameKey,[string]$outputfile) { # This is where
     # Use Unicode triangles to indicate bases that are occupied
     # 1st base
     if ($MLB_linescore.offense.first) {
-        $firstBase = [char]0x25B6
+        $firstBase = [char]0x25C6 #[char]0x25B6
     }
     else {
-        $firstBase = [char]0x25B7
+        $firstBase = [char]0x25C7 #[char]0x25B7
     }
 
     # 2nd base
     if ($MLB_linescore.offense.second) {
-        $secondBase = [char]0x25B2
+        $secondBase = [char]0x25C6 #[char]0x25B2
     }
     else {
-        $secondBase = [char]0x25B3
+        $secondBase = [char]0x25C7 #[char]0x25B3
     }
 
     # 3rd base
     if ($MLB_linescore.offense.third) {
-        $thirdBase = [char]0x25C0
+        $thirdBase = [char]0x25C6 #[char]0x25C0
     }
     else {
-        $thirdBase = [char]0x25C1
+        $thirdBase = [char]0x25C7 #[char]0x25C1
     }
 
     # Use open and filled circle Unicode characters to indicate outs
     $outs = switch ($mlb_linescore.outs) {
-        "0" {[char]0x26AA+""+[char]0x26AA+""+[char]0x26AA}
-        "1" {[char]0x26AB+""+[char]0x26AA+""+[char]0x26AA}
-        "2" {[char]0x26AB+""+[char]0x26AB+""+[char]0x26AA}
-        "3" {[char]0x26AB+""+[char]0x26AB+""+[char]0x26AB}
+        "0" {[char]0x26AA+""+[char]0x26AA}#+""+[char]0x26AA}
+        "1" {[char]0x26AB+""+[char]0x26AA}#+""+[char]0x26AA}
+        "2" {[char]0x26AB+""+[char]0x26AB}#+""+[char]0x26AA}
+        "3" {[char]0x26AB+""+[char]0x26AB}#+""+[char]0x26AB}
         default {""} # This should never happen, but sports are weird
     }
 
@@ -268,11 +268,7 @@ function buildLinescore ([string]$gameKey,[string]$outputfile) { # This is where
         $batterhistorical      = Invoke-RestMethod -Uri $URI_batterhistorical
         $battercurrent         = Invoke-RestMethod -Uri $URI_battercurrent
 
-        $rowP  = $mlb_pbp.currentPlay.matchup.pitcher.fullName+" ("
-        if ($pitchercurrent.stats.splits.stat.inningsPitched) {
-            $rowP += $pitchercurrent.stats.splits.stat.inningsPitched+" IP "
-        }
-        $rowP += $pitcherhistorical.stats.splits.stat.era+" ERA) pitching to "+$mlb_pbp.currentPlay.matchup.batter.fullName+" ("+$batterhistorical.stats.splits.stat.avg+"/"+$batterhistorical.stats.splits.stat.ops+"/"+$batterhistorical.stats.splits.stat.slg+")"
+        $rowP  = $mlb_pbp.currentPlay.matchup.pitcher.fullName+" ("+$pitcherhistorical.stats.splits.stat.era+" ERA) pitching to "+$mlb_pbp.currentPlay.matchup.batter.fullName+" ("+$batterhistorical.stats.splits.stat.avg+"/"+$batterhistorical.stats.splits.stat.obp+"/"+$batterhistorical.stats.splits.stat.slg+")"
     }
 
     # Write line score to the console if debugging is enabled
