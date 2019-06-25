@@ -27,8 +27,6 @@ $URI_live      = $MLB_URL+"/api/v1.1/game/"+$mlb_gamekey+"/feed/live/"
 $URI_diffPatch = $MLB_URL+"/api/v1.1/game/"+$mlb_gamekey+"/feed/live/diffPatch"
 
 function buildLinescore ([string]$outputfile) { # This is where the magic happens
-    clear-host # For visual clarity, duh; only matters if debugging is enabled
-
     # Grab the API data needed to build the line score
     $mlb_boxscore  = Invoke-RestMethod -Uri $URI_boxscore
     $mlb_linescore = Invoke-RestMethod -Uri $URI_linescore
@@ -57,7 +55,7 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     $home_hits = $mlb_linescore.teams.home.hits
     $home_errs = $mlb_linescore.teams.home.errors
 
-    # Build the front for each row in the line score
+    # Build the leading lines for each row in the line score
     $rowI = "           $delimiter"
     $rowA = "$abbr_away ($away_record) $delimiter"
     $rowH = "$abbr_home ($home_record) $delimiter"
@@ -157,10 +155,6 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     }
     $rowH += "$home_errs $delimiter$delimiter"
 
-    # Pull venue info from API
-    $venue = $mlb_boxscore.teams.home.team.venue.name
-    $location = $mlb_boxscore.teams.home.team.locationName
-
     $inningState = switch ($mlb_linescore.inningState) { # Use Unicode arrow characters for "graphics" that indicate top, middle, or bottom of an inning
         "Top"    {$top}
         "Bottom" {$bottom}
@@ -203,13 +197,17 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
         default {""} # This should never happen, but sports are weird
     }
 
+    # Pull venue info from API
+    $venue = $mlb_boxscore.teams.home.team.venue.name
+    $location = $mlb_boxscore.teams.home.team.locationName
+
     # Build current inning status line
     $rowS = "$InningState$curr_inning $balls-$strikes $firstBase$secondBase$thirdBase $outs  at $venue in $location"
 
-    if ($mlb_pbp.currentPlay.result.description) {
+    if ($mlb_pbp.currentPlay.result.description) { # Write official play-by-play description, if exists
         $rowP = $mlb_pbp.currentPlay.result.description
     }
-    else { # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players
+    else { # Build pitching and batting stats line for the current players if no play-by-play info is active
         $URI_pitcherhistorical = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats?stats=season"
         $URI_pitchercurrent    = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats/game/current/?group=pitching"
         $URI_batterhistorical  = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.batter.id+"/stats?stats=season"
@@ -224,6 +222,7 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     }
 
     if ($debugOn) { # Write line score to the console if debugging is enabled
+        clear-host
         write-host $rowI
         write-host $rowA
         write-host $rowH
@@ -251,9 +250,17 @@ do { # Run script continuously while game is in session
     $gameState = $live.gameData.status.abstractGameState
 
     if ($gameState -eq "Preview") { # If no game is active, output the next game time and date
-        clear-host
-        write-host $live.liveData.boxscore.teams.away.team.name "at" $live.liveData.boxscore.teams.home.team.name
-        write-host "Game starts at" $live.gamedata.datetime.time$live.gamedata.datetime.ampm "ET on" $live.gamedata.datetime.originalDate
+        $row1 = $live.liveData.boxscore.teams.away.team.name+" at "+$live.liveData.boxscore.teams.home.team.name
+        $row2 = "Game starts at "+$live.gamedata.datetime.time+$live.gamedata.datetime.ampm+" ET on "+$live.gamedata.datetime.originalDate
+        if ($debugOn) {
+            clear-host
+            write-host $row1
+            write-host $row2
+        }
+        if ($writeOutput) { # Write line score to text file for digestion by external apps if enabled
+            $row1 | out-file -FilePath $filePath -encoding UTF8
+            $row2 | out-file -FilePath $filePath -encoding UTF8 -Append
+        }
         $gameState = "Final" # Fake out the gameState so the loop ends
     }
     else {
