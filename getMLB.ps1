@@ -63,10 +63,6 @@ $URI_linescore = "https://statsapi.mlb.com/api/v1/game/"+$mlb_gamekey+"/linescor
 $URI_pbp       = "https://statsapi.mlb.com/api/v1/game/"+$mlb_gamekey+"/playByPlay"
 $URI_diffPatch = "https://statsapi.mlb.com/api/v1.1/game/"+$mlb_gamekey+"/feed/live/diffPatch"
 
-# Get initial timestamp from diffPatch so we're not polling the entire data set until it changes
-$diffPatch = Invoke-RestMethod -Uri $URI_diffPatch
-$startTime = $diffPatch.metaData.timeStamp
-
 function buildLinescore ([string]$outputfile) { # This is where the magic happens
     clear-host # For visual clarity, duh; only matters if debugging is enabled
 
@@ -254,16 +250,16 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     # Build current inning status line
     $rowS = "$InningState$curr_inning $balls-$strikes $firstBase$secondBase$thirdBase $outs  at $venue in $location"
 
-    # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players
-    $URI_pitcherhistorical = "https://statsapi.mlb.com/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats?stats=season"
-    $URI_pitchercurrent    = "https://statsapi.mlb.com/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats/game/current/?group=pitching"
-    $URI_batterhistorical  = "https://statsapi.mlb.com/api/v1/people/"+$mlb_pbp.currentPlay.matchup.batter.id+"/stats?stats=season"
-    $URI_battercurrent     = "https://statsapi.mlb.com/api/v1/people/"+$mlb_pbp.currentPlay.matchup.batter.id+"/stats/game/current/?group=hitting"
-
     if ($mlb_pbp.currentPlay.result.description) {
         $rowP = $mlb_pbp.currentPlay.result.description
     }
     else {
+        # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players
+        $URI_pitcherhistorical = "https://statsapi.mlb.com/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats?stats=season"
+        $URI_pitchercurrent    = "https://statsapi.mlb.com/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats/game/current/?group=pitching"
+        $URI_batterhistorical  = "https://statsapi.mlb.com/api/v1/people/"+$mlb_pbp.currentPlay.matchup.batter.id+"/stats?stats=season"
+        $URI_battercurrent     = "https://statsapi.mlb.com/api/v1/people/"+$mlb_pbp.currentPlay.matchup.batter.id+"/stats/game/current/?group=hitting"
+
         $pitcherhistorical = Invoke-RestMethod -Uri $URI_pitcherhistorical
         $pitchercurrent    = Invoke-RestMethod -Uri $URI_pitchercurrent
         $batterhistorical  = Invoke-RestMethod -Uri $URI_batterhistorical
@@ -291,10 +287,15 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     }
 }
 
+# Get initial timestamp from diffPatch so we're not polling the entire data set until it changes
+$diffPatch = Invoke-RestMethod -Uri $URI_diffPatch
+$startTime = $diffPatch.metaData.timeStamp
+$URI_newDiff = $URI_diffPatch+"?startTimecode="+$startTime
+
 do { # Run script continuously while game is in session
     buildLinescore($filePath)
 
-    do { # Pause for 5 seconds before polling diffPatch and continue to poll until a new event happens
+    do { # Pause before polling diffPatch and continue to poll until a new event happens
         Start-Sleep -Second 1
         $URI_newDiff = $URI_diffPatch+"?startTimecode="+$startTime
         $newDiffPatch = Invoke-RestMethod -Uri $URI_newDiff
