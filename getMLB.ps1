@@ -296,7 +296,7 @@ do { # Run script continuously while game is in session
     buildLinescore($filePath)
 
     do { # Pause before polling diffPatch and continue to poll until a new event happens
-        Start-Sleep -Second 1
+        #Start-Sleep -Second 1
         $URI_newDiff = $URI_diffPatch+"?startTimecode="+$startTime
         $newDiffPatch = Invoke-RestMethod -Uri $URI_newDiff
     } while (!$newDiffPatch)
