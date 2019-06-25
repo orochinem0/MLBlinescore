@@ -1,34 +1,4 @@
-# Teams table
-$LAA = 108
-$ARI = 109
-$BAL = 110
-$BOS = 111
-$CHC = 112
-$CIN = 113
-$CLE = 114
-$COL = 115
-$DET = 116
-$HOU = 117
-$KC	 = 118
-$LAD = 119
-$WSH = 120
-$NYM = 121
-$OAK = 133
-$PIT = 134
-$SD	 = 135
-$SEA = 136
-$SF	 = 137
-$STL = 138
-$TB	 = 139
-$TEX = 140
-$TOR = 141
-$MIN = 142
-$PHI = 143
-$ATL = 144
-$CWS = 145
-$MIA = 146
-$NYY = 147
-$MIL = 148
+. "$PSScriptRoot\cMLB.ps1"
 
 # Where to write locally, and whether to write to file or console
 $filePath    = "C:\Users\yt\Documents\Twitch Assets\mlbscore.txt"
@@ -40,12 +10,15 @@ $writeOutput = $true
 # Set to a space or $null if you don't want a delimiter
 $delimiter = [char]0x2502
 
+# Polling delay, in seconds
+$diffDelay = 1
+
 # The data that sets the wheels into motion - team and date
 # You can pick a past date to get a specific game's final outcome
 # However, this code is not intended to iterate through a past game
-# The intended use is to determine the current day and date and let the script iterate over a live game
+# The intended use is to determine the current day and date and let the script iterate over a live game a specific team is playing
 # It should stop when the live game is over
-$teamID = $KC
+$teamID = $NYM
 $MLB_today = Get-Date -format "MM/dd/yyyy"
 
 # Get the current gamePk, or game specific ID, based on the team and date set above
@@ -58,10 +31,12 @@ if ($mlb_games.totalGames) {
     $mlb_gamekey = $mlb_games.dates.games.gamePk
 }
 
+# Common URIs
 $URI_boxscore  = "https://statsapi.mlb.com/api/v1/game/"+$mlb_gamekey+"/boxscore"
 $URI_linescore = "https://statsapi.mlb.com/api/v1/game/"+$mlb_gamekey+"/linescore"
 $URI_pbp       = "https://statsapi.mlb.com/api/v1/game/"+$mlb_gamekey+"/playByPlay"
 $URI_diffPatch = "https://statsapi.mlb.com/api/v1.1/game/"+$mlb_gamekey+"/feed/live/diffPatch"
+$URI_live      = "https://statsapi.mlb.com/api/v1.1/game/"+$mlb_gamekey+"/feed/live/"
 
 function buildLinescore ([string]$outputfile) { # This is where the magic happens
     clear-host # For visual clarity, duh; only matters if debugging is enabled
@@ -103,8 +78,7 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     $curr_inning = $mlb_linescore.currentInning
     $sche_inning = $mlb_linescore.scheduledInnings
 
-    # Iterate thru the innings and build the line score
-    for ($i=0; $i -lt $curr_inning; $i++) { 
+    for ($i=0; $i -lt $curr_inning; $i++) { # Iterate thru the innings and build the line score
         $runsA = $mlb_linescore.innings[$i].away.runs
         #if (($mlb_linescore.teams.home.runs -gt $mlb_linescore.teams.away.runs) -and (-not $mlb_linescore.innings[$i].home.runs) -and (($i+1) -ge $sche_inning) -and ($curr_inning -eq $sche_inning)) {
         #    $runsH = "X" # NOT WORKING: The intent here is to write an X into the home team's final inning if they win a walk-off
@@ -199,13 +173,11 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     $venue = $mlb_boxscore.teams.home.team.venue.name
     $location = $mlb_boxscore.teams.home.team.locationName
 
-    # Use Unicode arrow characters for "graphics" that indicate top, middle, or bottom of an inning
-    # Any other inning status is blank
-    $inningState = switch ($mlb_linescore.inningState) {
-        "Top"    {[char]0x2B06}
-        "Bottom" {[char]0x2B07}
-        "Middle" {[char]0x2B0C}
-        default  {" "}
+    $inningState = switch ($mlb_linescore.inningState) { # Use Unicode arrow characters for "graphics" that indicate top, middle, or bottom of an inning
+        "Top"    {[char]0x25B2}
+        "Bottom" {[char]0x25BC}
+        "Middle" {""} # Any other inning status is blank
+        default  {""}
     }
 
     # IA IA IA revere and publish the count
@@ -213,33 +185,29 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     $balls       = $mlb_linescore.balls
     $strikes     = $mlb_linescore.strikes
 
-    # Use Unicode triangles to indicate bases that are occupied
-    # 1st base
-    if ($MLB_linescore.offense.first) {
+    # Use Unicode shapes to indicate bases that are occupied
+    if ($MLB_linescore.offense.first) { # 1st base
         $firstBase = "1"+[char]0x25C6
     }
     else {
         $firstBase = "1"+[char]0x25C7
     }
 
-    # 2nd base
-    if ($MLB_linescore.offense.second) {
+    if ($MLB_linescore.offense.second) { # 2nd base
         $secondBase = "2"+[char]0x25C6
     }
     else {
         $secondBase = "2"+[char]0x25C7
     }
 
-    # 3rd base
-    if ($MLB_linescore.offense.third) {
+    if ($MLB_linescore.offense.third) { # 3rd base
         $thirdBase = "3"+[char]0x25C6
     }
     else {
         $thirdBase = "3"+[char]0x25C7
     }
 
-    # Use open and filled circle Unicode characters to indicate outs
-    $outs = switch ($mlb_linescore.outs) {
+    $outs = switch ($mlb_linescore.outs) { # Use open and filled circle Unicode characters to indicate outs
         "0" {[char]0x26AA+""+[char]0x26AA}
         "1" {[char]0x26AB+""+[char]0x26AA}
         "2" {[char]0x26AB+""+[char]0x26AB}
@@ -253,8 +221,7 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     if ($mlb_pbp.currentPlay.result.description) {
         $rowP = $mlb_pbp.currentPlay.result.description
     }
-    else {
-        # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players
+    else { # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players
         $URI_pitcherhistorical = "https://statsapi.mlb.com/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats?stats=season"
         $URI_pitchercurrent    = "https://statsapi.mlb.com/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats/game/current/?group=pitching"
         $URI_batterhistorical  = "https://statsapi.mlb.com/api/v1/people/"+$mlb_pbp.currentPlay.matchup.batter.id+"/stats?stats=season"
@@ -268,8 +235,7 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
         $rowP  = $mlb_pbp.currentPlay.matchup.pitcher.fullName+" ("+$pitcherhistorical.stats.splits.stat.era+" ERA) pitching to "+$mlb_pbp.currentPlay.matchup.batter.fullName+" ("+$batterhistorical.stats.splits.stat.avg+"/"+$batterhistorical.stats.splits.stat.obp+"/"+$batterhistorical.stats.splits.stat.slg+")"
     }
 
-    # Write line score to the console if debugging is enabled
-    if ($debugOn) {
+    if ($debugOn) { # Write line score to the console if debugging is enabled
         write-host $rowI
         write-host $rowA
         write-host $rowH
@@ -277,8 +243,7 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
         write-host $rowP
     }
 
-    # Write line score to text file for digestion by external apps if enabled
-    if ($writeOutput) {
+    if ($writeOutput) { # Write line score to text file for digestion by external apps if enabled
         $rowI | out-file -FilePath $filePath -encoding UTF8
         $rowA | out-file -FilePath $filePath -encoding UTF8 -Append
         $rowH | out-file -FilePath $filePath -encoding UTF8 -Append
@@ -289,23 +254,31 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
 
 # Get initial timestamp from diffPatch so we're not polling the entire data set until it changes
 $diffPatch = Invoke-RestMethod -Uri $URI_diffPatch
-$startTime = $diffPatch.metaData.timeStamp
-$URI_newDiff = $URI_diffPatch+"?startTimecode="+$startTime
+$newTime = $diffPatch.metaData.timeStamp
+$startTime = $newTime
 
 do { # Run script continuously while game is in session
-    buildLinescore($filePath)
-
-    do { # Pause before polling diffPatch and continue to poll until a new event happens
-        #Start-Sleep -Second 1
-        $URI_newDiff = $URI_diffPatch+"?startTimecode="+$startTime
-        $newDiffPatch = Invoke-RestMethod -Uri $URI_newDiff
-    } while (!$newDiffPatch)
-
-    # Set most recent updated event timestamp to startTime for next iteration
-    $newTime = $newdiffpatch.metadata.timeStamp
-    $startTime = $newTime
-
-    # Check whether the game is over
-    $URI_live = "https://statsapi.mlb.com/api/v1.1/game/"+$mlb_gamekey+"/feed/live/"
+    # Check game status
     $live = Invoke-RestMethod -Uri $URI_live
-} while ($live.gameData.status.abstractGameState -ne "Final")
+    $gameState = $live.gameData.status.abstractGameState
+
+    if ($gameState -eq "Preview") { # If no game is active, output the next game time and date
+        clear-host
+        write-host $live.liveData.boxscore.teams.away.team.name "at" $live.liveData.boxscore.teams.home.team.name
+        write-host "Game starts at" $live.gamedata.datetime.time$live.gamedata.datetime.ampm "on" $live.gamedata.datetime.originalDate
+        $gameState = "Final" # Fake out the gameState so the loop ends
+    }
+    else {
+        buildLinescore($filePath)
+
+        do { # Optionally pause before polling diffPatch and continue to poll until a new event happens
+            Start-Sleep -Second $diffDelay
+            $URI_newDiff = $URI_diffPatch+"?startTimecode="+$startTime
+            $newDiffPatch = Invoke-RestMethod -Uri $URI_newDiff
+        } while (!$newDiffPatch)
+
+        # Set most recent updated event timestamp to startTime for next iteration
+        $newTime = $newdiffpatch.metadata.timeStamp
+        $startTime = $newTime
+    }
+} while ($gameState -ne "Final") # Stop the script when the ballgame is over
