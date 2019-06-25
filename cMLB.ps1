@@ -8,6 +8,12 @@ $filePath    = "C:\Users\yt\Documents\Twitch Assets\mlbscore.txt"
 $debugOn     = $true
 $writeOutput = $true
 
+# Time zone constants
+$loctzName = "Pacific Standard Time"
+$MLBtzName   = "Eastern Standard Time"
+$mlbtz = [System.TimeZoneInfo]::GetSystemTimeZones() | Where-Object { $_.Id -eq $MLBtzName }
+$loctz = [System.TimeZoneInfo]::GetSystemTimeZones() | Where-Object { $_.Id -eq $loctzName }
+
 # Teams table
 $LAA = 108
 $ARI = 109

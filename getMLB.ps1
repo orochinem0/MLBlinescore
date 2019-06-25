@@ -32,19 +32,28 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     $mlb_linescore = Invoke-RestMethod -Uri $URI_linescore
     $mlb_pbp       = Invoke-RestMethod -Uri $URI_pbp
 
-    # Start by building the front part of the line score
-    $abbr_away = $mlb_boxscore.teams.away.team.abbreviation
-    $abbr_home = $mlb_boxscore.teams.home.team.abbreviation
-    if ($abbr_away.length -lt 3) {
-        $abbr_away += " "
-    }
-    if ($abbr_home.length -lt 3) {
-        $abbr_home += " "
-    }
+    # Build the leading lines for each row in the line score
+    $rowI = "           $delimiter"
+    $rowA = "$abbr_away ($away_record) $delimiter"
+    $rowH = "$abbr_home ($home_record) $delimiter"
 
-    # Add win/loss percentage to team names
-    $away_record = $mlb_boxscore.teams.away.team.record.winningPercentage
-    $home_record = $mlb_boxscore.teams.home.team.record.winningPercentage
+    for ($i=0; $i -lt $curr_inning; $i++) { # Iterate thru the innings and draw the runs per inning
+        $rowI += "$delimiter  "+($i+1)+" "
+
+        $runsA = $mlb_linescore.innings[$i].away.runs
+        $rowA += "$delimiter"
+        if ($i -gt 9) { $rowA += " " }
+        if ($runsA -lt 10) { $rowA += " " }
+        if ($runsA -eq $null) { $rowA += "   " }
+        else { $rowA += " $runsA " }
+
+        $runsH = $mlb_linescore.innings[$i].home.runs
+        $rowH += "$delimiter"
+        if ($i -gt 9) { $rowH += " " }
+        if ($runsH -lt 10) { $rowH += " " }
+        if ($runsH -eq $null) { $rowH += "   " }
+        else { $rowH += " $runsH " }
+    }
 
     # Capture the RHE data for both teams
     $away_runs = $mlb_linescore.teams.away.runs
@@ -55,107 +64,49 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     $home_hits = $mlb_linescore.teams.home.hits
     $home_errs = $mlb_linescore.teams.home.errors
 
-    # Build the leading lines for each row in the line score
-    $rowI = "           $delimiter"
-    $rowA = "$abbr_away ($away_record) $delimiter"
-    $rowH = "$abbr_home ($home_record) $delimiter"
-
-    # Placeholder for future solution for walk-off home games where an X should be on the line score's home team last inning slot
-    $curr_inning = $mlb_linescore.currentInning
-    $sche_inning = $mlb_linescore.scheduledInnings
-
-    for ($i=0; $i -lt $curr_inning; $i++) { # Iterate thru the innings and build the line score
-        $runsA = $mlb_linescore.innings[$i].away.runs
-        #if (($mlb_linescore.teams.home.runs -gt $mlb_linescore.teams.away.runs) -and (-not $mlb_linescore.innings[$i].home.runs) -and (($i+1) -ge $sche_inning) -and ($curr_inning -eq $sche_inning)) {
-        #    $runsH = "X" # NOT WORKING: The intent here is to write an X into the home team's final inning if they win a walk-off
-        #}
-        #else {
-            $runsH = $mlb_linescore.innings[$i].home.runs
-        #}
-
-        # Write individual inning data
-        $rowA += "$delimiter"
-        $rowH += "$delimiter"
-        if ($runsA -lt 10) {
-            $rowA += " "
-        }
-        if (($runsH -lt 10) -or ($runsH -eq "X")) {
-            $rowH += " "
-        }
-        if ($runsA -eq $null) {
-            $rowA += "   "
-        }
-        else {
-            $rowA += " $runsA "
-        }
-        if ($runsH -eq $null) {
-            $rowH += "   "
-        }
-        else {
-            $rowH += " $runsH "
-        }
-        $rowI += "$delimiter  "+($i+1)+" "
-    }
-
-    # Write runs, hits, and errors data with proper spacing
+    # Write runs, hits, and errors header with proper spacing
     $rowI += "$delimiter$delimiter  R $delimiter  H $delimiter  E $delimiter$delimiter"
 
-    # Away
+    # Away RHE
     $rowA += "$delimiter$delimiter "
-    if ($away_runs -lt 10) {
-        $rowA += " "
-    }
-    if ($away_runs -eq $null) {
-        $rowA += " "
-    }
+    if ($away_runs -lt 10) { $rowA += " " }
+    if ($away_runs -eq $null) { $rowA += " " }
     $rowA += "$away_runs $delimiter "
 
-    if ($away_hits -lt 10) {
-        $rowA += " "
-    }
-    if ($away_hits -eq $null) {
-        $rowA += " "
-    }
+    if ($away_hits -lt 10) { $rowA += " " }
+    if ($away_hits -eq $null) { $rowA += " " }
     $rowA += "$away_hits $delimiter "
 
-    if ($away_errs -lt 10) {
-        $rowA += " "
-    }
-    if ($away_errs -eq $null) {
-        $rowA += " "
-    }
+    if ($away_errs -lt 10) { $rowA += " " }
+    if ($away_errs -eq $null) { $rowA += " " }
     $rowA += "$away_errs $delimiter$delimiter"
-    if ($away_runs -lt 10) {
-        $rowA += " "
-    }
+    if ($away_runs -lt 10) { $rowA += " " }
 
-    # Home
+    # Home RHE
     $rowH += "$delimiter$delimiter "
-    if ($home_runs -lt 10) {
-        $rowH += " "
-    }
-    if ($home_runs -eq $null) {
-        $rowH += " "
-    }
+    if ($home_runs -lt 10) { $rowH += " " }
+    if ($home_runs -eq $null) { $rowH += " " }
     $rowH += "$home_runs $delimiter "
 
-    if ($home_hits -lt 10) {
-        $rowH += " "
-    }
-    if ($home_hits -eq $null) {
-        $rowH += " "
-    }
+    if ($home_hits -lt 10) { $rowH += " " }
+    if ($home_hits -eq $null) { $rowH += " " }
     $rowH += "$home_hits $delimiter "
 
-    if ($home_errs -lt 10) {
-        $rowH += " "
-    }
-    if ($home_errs -eq $null) {
-        $rowH += " "
-    }
+    if ($home_errs -lt 10) { $rowH += " " }
+    if ($home_errs -eq $null) { $rowH += " " }
     $rowH += "$home_errs $delimiter$delimiter"
 
-    $inningState = switch ($mlb_linescore.inningState) { # Use Unicode arrow characters for "graphics" that indicate top, middle, or bottom of an inning
+    # Build the front part of the line score
+    $abbr_away = $mlb_boxscore.teams.away.team.abbreviation
+    $abbr_home = $mlb_boxscore.teams.home.team.abbreviation
+    if ($abbr_away.length -lt 3) { $abbr_away += " " } # Pad short team abbreviations
+    if ($abbr_home.length -lt 3) { $abbr_home += " " }
+
+    # Add win/loss percentage to team names
+    $away_record = $mlb_boxscore.teams.away.team.record.winningPercentage
+    $home_record = $mlb_boxscore.teams.home.team.record.winningPercentage
+
+    $inningState = switch ($mlb_linescore.inningState) { # Shapes defined in config
         "Top"    {$top}
         "Bottom" {$bottom}
         "Middle" {$middle}
@@ -167,29 +118,17 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     $balls       = $mlb_linescore.balls
     $strikes     = $mlb_linescore.strikes
 
-    # Use Unicode shapes to indicate bases that are occupied
-    if ($MLB_linescore.offense.first) { # 1st base
-        $firstBase = "1"+$baseOn
-    }
-    else {
-        $firstBase = "1"+$baseOff
-    }
+    # Shapes defined in config
+    if ($MLB_linescore.offense.first) { $firstBase = "1"+$baseOn }
+    else { $firstBase = "1"+$baseOff }
 
-    if ($MLB_linescore.offense.second) { # 2nd base
-        $secondBase = "2"+$baseOn
-    }
-    else {
-        $secondBase = "2"+$baseOff
-    }
+    if ($MLB_linescore.offense.second) { $secondBase = "2"+$baseOn }
+    else { $secondBase = "2"+$baseOff }
 
-    if ($MLB_linescore.offense.third) { # 3rd base
-        $thirdBase = "3"+$baseOn
-    }
-    else {
-        $thirdBase = "3"+$baseOff
-    }
+    if ($MLB_linescore.offense.third) { $thirdBase = "3"+$baseOn }
+    else { $thirdBase = "3"+$baseOff }
 
-    $outs = switch ($mlb_linescore.outs) { # Use open and filled circle Unicode characters to indicate outs
+    $outs = switch ($mlb_linescore.outs) { # Shapes defined in config
         "0" {$outOff+""+$outOff}
         "1" {$outOn+""+$outOff}
         "2" {$outOn+""+$outOn}
@@ -251,13 +190,14 @@ do { # Run script continuously while game is in session
 
     if ($gameState -eq "Preview") { # If no game is active, output the next game time and date
         $row1 = $live.liveData.boxscore.teams.away.team.name+" at "+$live.liveData.boxscore.teams.home.team.name
-        $row2 = "Game starts at "+$live.gamedata.datetime.time+$live.gamedata.datetime.ampm+" ET on "+$live.gamedata.datetime.originalDate
+        $row2 = "Game starts at "+$live.gamedata.datetime.time+" "+$live.gamedata.datetime.originalDate
+
         if ($debugOn) {
             clear-host
             write-host $row1
             write-host $row2
         }
-        if ($writeOutput) { # Write line score to text file for digestion by external apps if enabled
+        if ($writeOutput) { 
             $row1 | out-file -FilePath $filePath -encoding UTF8
             $row2 | out-file -FilePath $filePath -encoding UTF8 -Append
         }
