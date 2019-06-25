@@ -1,4 +1,12 @@
-﻿# MLB Config File
+﻿# MLB Linescore Config File
+
+# API URL
+$MLB_URL = "https://statsapi.mlb.com"
+
+# Where to write locally, and whether to write to file or console
+$filePath    = "C:\Users\yt\Documents\Twitch Assets\mlbscore.txt"
+$debugOn     = $true
+$writeOutput = $true
 
 # Teams table
 $LAA = 108
@@ -31,3 +39,16 @@ $CWS = 145
 $MIA = 146
 $NYY = 147
 $MIL = 148
+
+# Delimeters and other common symbols
+$delimiter = [char]0x2502 # This is the Unicode box vertical, which is a nice, neat divider
+$baseOn    = [char]0x25C6
+$baseOff   = [char]0x25C7
+$outOn     = [char]0x26AB
+$outOff    = [char]0x26AA
+$top       = [char]0x25B2
+$bottom    = [char]0x25BC
+$middle    = ""
+
+# Polling delay, in seconds
+$diffDelay = 1
