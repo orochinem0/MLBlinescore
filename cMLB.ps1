@@ -57,4 +57,4 @@ $bottom    = [char]0x25BC
 $middle    = ""
 
 # Polling delay, in seconds
-$diffDelay = 1
+$diffDelay = 3
