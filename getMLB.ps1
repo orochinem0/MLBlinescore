@@ -226,7 +226,7 @@ do { # Run script continuously while game is Live
         Set-ScheduledTask -TaskName "Run MLB Linescore" -Trigger $trigger
 
         $row1 = $live.liveData.boxscore.teams.away.team.name+" at "+$live.liveData.boxscore.teams.home.team.name
-        $row2 = "Game starts at "+$startTime+" "+$loctz+" "
+        $row2 = "Game starts at "+$startTime+" "+$loctz
 
         if ($debugOn) { # Write pre-game info to console
             clear-host
@@ -255,6 +255,7 @@ do { # Run script continuously while game is Live
 
             # Set most recent updated event timestamp to startTime for next iteration
             $startTime = $newdiffpatch.metadata.timeStamp
+            buildLinescore($filePath) # Build a linescore from API data
         }
     }
 } while ($gameState -ne "Final") # Stop the script when the ballgame is over
