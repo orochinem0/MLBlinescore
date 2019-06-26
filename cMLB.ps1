@@ -9,10 +9,8 @@ $debugOn     = $true
 $writeOutput = $true
 
 # Time zone constants
-$loctzName = "Pacific Standard Time"
-$MLBtzName = "Eastern Standard Time"
-$mlbtz = [System.TimeZoneInfo]::GetSystemTimeZones() | Where-Object { $_.Id -eq $MLBtzName }
-$loctz = [System.TimeZoneInfo]::GetSystemTimeZones() | Where-Object { $_.Id -eq $loctzName }
+$loctz = [Regex]::Replace([System.TimeZoneInfo]::Local.StandardName, '([A-Z])\w+\s*', '$1')
+$locoffset = [System.TimeZoneInfo]::Local.BaseUtcOffset.Hours
 
 # Teams table
 $LAA = 108
@@ -54,7 +52,7 @@ $outOn     = [char]0x26AB
 $outOff    = [char]0x26AA
 $top       = [char]0x25B2
 $bottom    = [char]0x25BC
-$middle    = ""
+$middle    = [char]0x2B0C
 
 # Polling delay, in seconds
 $diffDelay = 3

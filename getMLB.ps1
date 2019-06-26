@@ -7,7 +7,7 @@
 # The intended use is to determine the current day and date and let the script iterate over a live game a specific team is playing
 # It should stop when the live game is over
 # If the game is upcoming, it should output the teams playing and when the game will start
-$teamID = $CIN # Team codes and corresponding team IDs stored in the config
+$teamID = $NYM # Team codes and corresponding team IDs stored in the config
 $MLB_today = Get-Date -format "MM/dd/yyyy"
 
 # Get the current gamePk, or game specific ID, based on the team and date set above
@@ -193,9 +193,15 @@ do { # Run script continuously while game is Live
     $live = Invoke-RestMethod -Uri $URI_live
     $gameState = $live.gameData.status.abstractGameState
 
-    if ($gameState -eq "Preview") { # If no game is Live or Finished, output the next game time and date
+    if ($gameState -eq "Preview") { # If no game is Live or Finished, output the next game start time and date
+        $mlbtz = $live.gamedata.venue.timezone.tz # Using the venue local time zone, determine the user local time for the game start
+        $mlboffset = $live.gamedata.venue.timezone.offset
+        $timediff = $mlboffset - $locoffset
+        $hr,$mn = $live.gamedata.datetime.time.split(':')
+        $hr -= $timediff-1 # Uh...will explain this later
+
         $row1 = $live.liveData.boxscore.teams.away.team.name+" at "+$live.liveData.boxscore.teams.home.team.name
-        $row2 = "Game starts at "+$live.gamedata.datetime.time+" "+$live.gamedata.datetime.originalDate
+        $row2 = "Game starts at "+$hr+":"+$mn+" "+$live.gamedata.datetime.ampm+" "+$loctz+" "+$live.gamedata.datetime.originalDate
 
         if ($debugOn) { # Write pre-game info to console
             clear-host
