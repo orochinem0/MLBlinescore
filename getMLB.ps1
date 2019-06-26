@@ -1,4 +1,23 @@
-﻿# Includes
+﻿<#
+
+.SYNOPSIS
+
+
+.DESCRIPTION
+
+
+.EXAMPLE
+
+
+.NOTES
+
+
+.PARAMETER outputfile
+
+
+#>
+
+# Includes
 . "$PSScriptRoot\cMLB.ps1" # Config file
 
 # The data that sets the wheels into motion - team and date
