@@ -7,7 +7,7 @@
 # The intended use is to determine the current day and date and let the script iterate over a live game a specific team is playing
 # It should stop when the live game is over
 # If the game is upcoming, it should output the teams playing and when the game will start
-$teamID = $NYM # Team codes and corresponding team IDs stored in the config
+$teamID = $CIN # Team codes and corresponding team IDs stored in the config
 $MLB_today = Get-Date -format "MM/dd/yyyy"
 
 # Get the current gamePk, or game specific ID, based on the team and date set above
@@ -157,8 +157,8 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
 
     if ($mlb_pbp.currentPlay.result.description) { $rowP = $mlb_pbp.currentPlay.result.description }
     else { # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players
-        $URI_batterstats   = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.batter.id+"/stats/?stats=season"
-        $URI_pitcherstats  = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats/?stats=season"
+        $URI_batterstats   = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.batter.id+"/stats/?stats=career&group=hitting&season=2019"
+        $URI_pitcherstats  = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats?stats=career&group=pitching&season=2019"
 
         $batterstats  = Invoke-RestMethod -Uri $URI_batterstats
         $pitcherstats = Invoke-RestMethod -Uri $URI_pitcherstats

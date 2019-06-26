@@ -10,7 +10,7 @@ $writeOutput = $true
 
 # Time zone constants
 $loctzName = "Pacific Standard Time"
-$MLBtzName   = "Eastern Standard Time"
+$MLBtzName = "Eastern Standard Time"
 $mlbtz = [System.TimeZoneInfo]::GetSystemTimeZones() | Where-Object { $_.Id -eq $MLBtzName }
 $loctz = [System.TimeZoneInfo]::GetSystemTimeZones() | Where-Object { $_.Id -eq $loctzName }
 
