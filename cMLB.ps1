@@ -46,13 +46,13 @@ $MIL = 148
 
 # Delimeters and other common symbols
 $delimiter = [char]0x2502 # This is the Unicode box vertical, which is a nice, neat divider
-$baseOn    = [char]0x25C6
-$baseOff   = [char]0x25C7
-$outOn     = [char]0x26AB
-$outOff    = [char]0x26AA
-$top       = [char]0x25B2
-$bottom    = [char]0x25BC
-$middle    = [char]0x2B0C
+$baseOn    = [char]0x25C6 # Filled diamond
+$baseOff   = [char]0x25C7 # Open diamond
+$outOn     = [char]0x26AB # Filled circle
+$outOff    = [char]0x26AA # Open circle
+$top       = [char]0x25B2 # Upward pointing filled triangle
+$bottom    = [char]0x25BC # Downward pointing filled triangle
+$middle    = [char]0x2B0C # Horizontal double-headed arrow
 
 # Polling delay, in seconds
 $diffDelay = 3
