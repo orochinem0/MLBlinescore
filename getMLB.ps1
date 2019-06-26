@@ -1,4 +1,4 @@
-# Includes
+﻿# Includes
 . "$PSScriptRoot\cMLB.ps1" # Config file
 
 # The data that sets the wheels into motion - team and date
@@ -28,6 +28,29 @@ $URI_live      = $MLB_URL+"/api/v1.1/game/"+$mlb_gamekey+"/feed/live/"
 $URI_diffPatch = $MLB_URL+"/api/v1.1/game/"+$mlb_gamekey+"/feed/live/diffPatch"
 
 function buildLinescore ([string]$outputfile) { # This is where the magic happens
+    <#
+
+    .SYNOPSIS
+    Outputs a formatted baseball linescore using live API data from MLB
+
+    .DESCRIPTION
+    Using live MLB API data, parses the data into tokens and arranges into a text-based linescore, which can then be written to the console or to a text file for digestion by another application, such as an OBS stream
+
+    .EXAMPLE
+               ││  1 │  2 │  3 │  4 │  5 │  6 ││  R │  H │  E ││
+    NYM (.468) ││  2 │  1 │  1 │  0 │  0 │  1 ││  5 │  9 │  0 ││ 
+    PHI (.513) ││  1 │  0 │  0 │  1 │  0 │    ││  2 │  4 │  2 ││
+    ▼6th 1-1 1◆2◇3◇ ⚫⚪  at Citizens Bank Park in Philadelphia
+    Rhys Hoskins pops out to catcher Wilson Ramos in foul territory.  
+
+    .NOTES
+    Not using proper OOP so far
+
+    .PARAMETER outputfile
+    Path to a writeable text file. No validation is made on this step
+
+    #>
+
     # Start by building the front part of the line score
     $abbr_away = $mlb_boxscore.teams.away.team.abbreviation
     $abbr_home = $mlb_boxscore.teams.home.team.abbreviation
