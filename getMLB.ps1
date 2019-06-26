@@ -157,17 +157,13 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
 
     if ($mlb_pbp.currentPlay.result.description) { $rowP = $mlb_pbp.currentPlay.result.description }
     else { # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players
-        $URI_pitcherhistorical = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats?stats=season"
-        $URI_pitchercurrent    = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats/game/current/?group=pitching"
-        $URI_batterhistorical  = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.batter.id+"/stats?stats=season"
-        $URI_battercurrent     = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.batter.id+"/stats/game/current/?group=hitting"
+        $URI_batterstats   = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.batter.id+"/stats/?stats=season"
+        $URI_pitcherstats  = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats/?stats=season"
 
-        $pitcherhistorical = Invoke-RestMethod -Uri $URI_pitcherhistorical
-        $pitchercurrent    = Invoke-RestMethod -Uri $URI_pitchercurrent
-        $batterhistorical  = Invoke-RestMethod -Uri $URI_batterhistorical
-        $battercurrent     = Invoke-RestMethod -Uri $URI_battercurrent
+        $batterstats  = Invoke-RestMethod -Uri $URI_batterstats
+        $pitcherstats = Invoke-RestMethod -Uri $URI_pitcherstats
 
-        $rowP  = $mlb_pbp.currentPlay.matchup.pitcher.fullName+" ("+$pitcherhistorical.stats.splits.stat.era+" ERA) pitching to "+$mlb_pbp.currentPlay.matchup.batter.fullName+" ("+$batterhistorical.stats.splits.stat.avg+"/"+$batterhistorical.stats.splits.stat.obp+"/"+$batterhistorical.stats.splits.stat.slg+")"
+        $rowP  = $mlb_pbp.currentPlay.matchup.pitcher.fullName+" ("+$pitcherstats.stats.splits.stat.era+" ERA) pitching to "+$mlb_pbp.currentPlay.matchup.batter.fullName+" ("+$batterstats.stats.splits.stat.avg+"/"+$batterstats.stats.splits.stat.obp+"/"+$batterstats.stats.splits.stat.slg+")"
     }
 
     if ($debugOn) { # Write line score to the console if debugging is enabled
@@ -212,27 +208,22 @@ do { # Run script continuously while game is Live
         }
         $gameState = "Final" # Fake out the gameState so the loop ends
     }
-    elseif ($gameState -eq "Live") { # While game is Live, poll the API for the buildLinescore function to digest the data
+    elseif (($gameState -eq "Live") -or ($gameState -eq "Final")) { 
         $mlb_boxscore  = Invoke-RestMethod -Uri $URI_boxscore
         $mlb_linescore = Invoke-RestMethod -Uri $URI_linescore
         $mlb_pbp       = Invoke-RestMethod -Uri $URI_pbp
 
-        buildLinescore($filePath)
+        buildLinescore($filePath) # Build a linescore from current or historical data
 
-        do { # Poll DiffPatch for updated data before running thru the entire loop again
-            Start-Sleep -Second $diffDelay
-            $URI_newDiff = $URI_diffPatch+"?startTimecode="+$startTime
-            $newDiffPatch = Invoke-RestMethod -Uri $URI_newDiff
-        } while (!$newDiffPatch)
+        if ($gameState -eq "Live") {
+            do { # Poll DiffPatch for updated data before running thru the entire loop again
+                Start-Sleep -Second $diffDelay
+                $URI_newDiff = $URI_diffPatch+"?startTimecode="+$startTime
+                $newDiffPatch = Invoke-RestMethod -Uri $URI_newDiff
+            } while (!$newDiffPatch)
 
-        # Set most recent updated event timestamp to startTime for next iteration
-        $startTime = $newdiffpatch.metadata.timeStamp
-    }
-    elseif ($gameState -eq "Final") { # Do one iteration thru the buildLinescore function to output the result of a finished game
-        $mlb_boxscore  = Invoke-RestMethod -Uri $URI_boxscore
-        $mlb_linescore = Invoke-RestMethod -Uri $URI_linescore
-        $mlb_pbp       = Invoke-RestMethod -Uri $URI_pbp
-
-        buildLinescore($filePath)
+            # Set most recent updated event timestamp to startTime for next iteration
+            $startTime = $newdiffpatch.metadata.timeStamp
+        }
     }
 } while ($gameState -ne "Final") # Stop the script when the ballgame is over
