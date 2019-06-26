@@ -6,6 +6,7 @@
 # However, this code is not intended to iterate through a past game
 # The intended use is to determine the current day and date and let the script iterate over a live game a specific team is playing
 # It should stop when the live game is over
+# If the game is upcoming, it should output the teams playing and when the game will start
 $teamID = $NYM # Team codes and corresponding team IDs stored in the config
 $MLB_today = Get-Date -format "MM/dd/yyyy"
 
@@ -28,19 +29,11 @@ $URI_diffPatch = $MLB_URL+"/api/v1.1/game/"+$mlb_gamekey+"/feed/live/diffPatch"
 
 function buildLinescore ([string]$outputfile) { # This is where the magic happens
     # Grab the API data needed to build the line score
-    $mlb_boxscore  = Invoke-RestMethod -Uri $URI_boxscore
-    $mlb_linescore = Invoke-RestMethod -Uri $URI_linescore
-    $mlb_pbp       = Invoke-RestMethod -Uri $URI_pbp
-
     # Start by building the front part of the line score
     $abbr_away = $mlb_boxscore.teams.away.team.abbreviation
     $abbr_home = $mlb_boxscore.teams.home.team.abbreviation
-    if ($abbr_away.length -lt 3) {
-        $abbr_away += " "
-    }
-    if ($abbr_home.length -lt 3) {
-        $abbr_home += " "
-    }
+    if ($abbr_away.length -lt 3) { $abbr_away += " " } # Pad shorter team abbreviations
+    if ($abbr_home.length -lt 3) { $abbr_home += " " }
 
     # Add win/loss percentage to team names
     $away_record = $mlb_boxscore.teams.away.team.record.winningPercentage
@@ -60,40 +53,23 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     $rowA = "$abbr_away ($away_record) $delimiter"
     $rowH = "$abbr_home ($home_record) $delimiter"
 
-    # Placeholder for future solution for walk-off home games where an X should be on the line score's home team last inning slot
-    $curr_inning = $mlb_linescore.currentInning
-    $sche_inning = $mlb_linescore.scheduledInnings
-
-    for ($i=0; $i -lt $curr_inning; $i++) { # Iterate thru the innings and build the line score
+    for ($i=0; $i -lt $mlb_linescore.currentInning; $i++) { # Iterate thru the innings and build the line score
         $runsA = $mlb_linescore.innings[$i].away.runs
-        #if (($mlb_linescore.teams.home.runs -gt $mlb_linescore.teams.away.runs) -and (-not $mlb_linescore.innings[$i].home.runs) -and (($i+1) -ge $sche_inning) -and ($curr_inning -eq $sche_inning)) {
-        #    $runsH = "X" # NOT WORKING: The intent here is to write an X into the home team's final inning if they win a walk-off
-        #}
-        #else {
-            $runsH = $mlb_linescore.innings[$i].home.runs
-        #}
+        $runsH = $mlb_linescore.innings[$i].home.runs
 
         # Write individual inning data
         $rowA += "$delimiter"
+        if ($runsA -lt 10) { $rowA += " " } # Pad short numbers
+        if ($i -gt 9) { $rowA += " "} # Pad extra innings
+        if ($runsA -eq $null) { $rowA += "   " }
+        else { $rowA += " $runsA " }
+
         $rowH += "$delimiter"
-        if ($runsA -lt 10) {
-            $rowA += " "
-        }
-        if (($runsH -lt 10) -or ($runsH -eq "X")) {
-            $rowH += " "
-        }
-        if ($runsA -eq $null) {
-            $rowA += "   "
-        }
-        else {
-            $rowA += " $runsA "
-        }
-        if ($runsH -eq $null) {
-            $rowH += "   "
-        }
-        else {
-            $rowH += " $runsH "
-        }
+        if ($runsH -lt 10) { $rowH += " " }
+        if ($i -gt 9) { $rowH += " "}
+        if ($runsH -eq $null) { $rowH += "   " }
+        else { $rowH += " $runsH " }
+
         $rowI += "$delimiter  "+($i+1)+" "
     }
 
@@ -102,111 +78,62 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
 
     # Away
     $rowA += "$delimiter$delimiter "
-    if ($away_runs -lt 10) {
-        $rowA += " "
-    }
-    if ($away_runs -eq $null) {
-        $rowA += " "
-    }
+    if ($away_runs -lt 10) { $rowA += " " }
+    if ($away_runs -eq $null) { $rowA += " " }
     $rowA += "$away_runs $delimiter "
 
-    if ($away_hits -lt 10) {
-        $rowA += " "
-    }
-    if ($away_hits -eq $null) {
-        $rowA += " "
-    }
+    if ($away_hits -lt 10) { $rowA += " " }
+    if ($away_hits -eq $null) { $rowA += " " }
     $rowA += "$away_hits $delimiter "
 
-    if ($away_errs -lt 10) {
-        $rowA += " "
-    }
-    if ($away_errs -eq $null) {
-        $rowA += " "
-    }
+    if ($away_errs -lt 10) { $rowA += " " }
+    if ($away_errs -eq $null) { $rowA += " " }
     $rowA += "$away_errs $delimiter$delimiter"
-    if ($away_runs -lt 10) {
-        $rowA += " "
-    }
+    if ($away_runs -lt 10) { $rowA += " " }
 
-    # Home
+    # Home Runs
     $rowH += "$delimiter$delimiter "
-    if ($home_runs -lt 10) {
-        $rowH += " "
-    }
-    if ($home_runs -eq $null) {
-        $rowH += " "
-    }
+    if ($home_runs -lt 10) { $rowH += " " }
+    if ($home_runs -eq $null) { $rowH += " " }
     $rowH += "$home_runs $delimiter "
 
-    if ($home_hits -lt 10) {
-        $rowH += " "
-    }
-    if ($home_hits -eq $null) {
-        $rowH += " "
-    }
+    if ($home_hits -lt 10) { $rowH += " " }
+    if ($home_hits -eq $null) { $rowH += " " }
     $rowH += "$home_hits $delimiter "
 
-    if ($home_errs -lt 10) {
-        $rowH += " "
-    }
-    if ($home_errs -eq $null) {
-        $rowH += " "
-    }
+    if ($home_errs -lt 10) { $rowH += " " }
+    if ($home_errs -eq $null) { $rowH += " " }
     $rowH += "$home_errs $delimiter$delimiter"
 
-    # Pull venue info from API
-    $venue = $mlb_boxscore.teams.home.team.venue.name
-    $location = $mlb_boxscore.teams.home.team.locationName
-
-    $inningState = switch ($mlb_linescore.inningState) { # Use Unicode arrow characters for "graphics" that indicate top, middle, or bottom of an inning
-        "Top"    {$top}
-        "Bottom" {$bottom}
-        "Middle" {$middle}
-        default  {""} # Any other inning status is blank
+    $inningState = switch ($mlb_linescore.inningState) { # Shapes defined in config
+        "Top"    { $top }
+        "Bottom" { $bottom }
+        "Middle" { $middle }
+        default  { "" } # Any other inning status is blank
     }
 
-    # IA IA IA revere and publish the count
-    $curr_inning = $mlb_linescore.currentInningOrdinal
-    $balls       = $mlb_linescore.balls
-    $strikes     = $mlb_linescore.strikes
+    # Shapes defined in config
+    if ($MLB_linescore.offense.first) { $firstBase = "1"+$baseOn }
+    else { $firstBase = "1"+$baseOff }
 
-    # Use Unicode shapes to indicate bases that are occupied
-    if ($MLB_linescore.offense.first) { # 1st base
-        $firstBase = "1"+$baseOn
-    }
-    else {
-        $firstBase = "1"+$baseOff
-    }
+    if ($MLB_linescore.offense.second) { $secondBase = "2"+$baseOn }
+    else { $secondBase = "2"+$baseOff }
 
-    if ($MLB_linescore.offense.second) { # 2nd base
-        $secondBase = "2"+$baseOn
-    }
-    else {
-        $secondBase = "2"+$baseOff
-    }
+    if ($MLB_linescore.offense.third) { $thirdBase = "3"+$baseOn }
+    else { $thirdBase = "3"+$baseOff }
 
-    if ($MLB_linescore.offense.third) { # 3rd base
-        $thirdBase = "3"+$baseOn
-    }
-    else {
-        $thirdBase = "3"+$baseOff
-    }
-
-    $outs = switch ($mlb_linescore.outs) { # Use open and filled circle Unicode characters to indicate outs
-        "0" {$outOff+""+$outOff}
-        "1" {$outOn+""+$outOff}
-        "2" {$outOn+""+$outOn}
-        "3" {$outOn+""+$outOn}
-        default {""} # This should never happen, but sports are weird
+    $outs = switch ($mlb_linescore.outs) { # Shapes defined in config
+        "0" { $outOff+""+$outOff }
+        "1" { $outOn+""+$outOff }
+        "2" { $outOn+""+$outOn }
+        "3" { $outOn+""+$outOn }
+        default { "" } # This should never happen, but sports are weird
     }
 
     # Build current inning status line
-    $rowS = "$InningState$curr_inning $balls-$strikes $firstBase$secondBase$thirdBase $outs  at $venue in $location"
+    $rowS = $InningState+$mlb_linescore.currentInningOrdinal+" "+$mlb_linescore.balls+"-"+$mlb_linescore.strikes+" "+$firstBase+$secondBase+$thirdBase+" "+$outs+"  at "+$mlb_boxscore.teams.home.team.venue.name+" in "+$mlb_boxscore.teams.home.team.locationName
 
-    if ($mlb_pbp.currentPlay.result.description) {
-        $rowP = $mlb_pbp.currentPlay.result.description
-    }
+    if ($mlb_pbp.currentPlay.result.description) { $rowP = $mlb_pbp.currentPlay.result.description }
     else { # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players
         $URI_pitcherhistorical = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats?stats=season"
         $URI_pitchercurrent    = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats/game/current/?group=pitching"
@@ -265,6 +192,10 @@ do { # Run script continuously while game is in session
         $gameState = "Final" # Fake out the gameState so the loop ends
     }
     else {
+        $mlb_boxscore  = Invoke-RestMethod -Uri $URI_boxscore
+        $mlb_linescore = Invoke-RestMethod -Uri $URI_linescore
+        $mlb_pbp       = Invoke-RestMethod -Uri $URI_pbp
+
         buildLinescore($filePath)
 
         do { # Optionally pause before polling diffPatch and continue to poll until a new event happens
