@@ -193,15 +193,21 @@ do { # Run script continuously while game is Live
     $live = Invoke-RestMethod -Uri $URI_live
     $gameState = $live.gameData.status.abstractGameState
 
-    if ($gameState -eq "Preview") { # If no game is Live or Finished, output the next game start time and date
-        $mlbtz = $live.gamedata.venue.timezone.tz # Using the venue local time zone, determine the user local time for the game start
+    if ($gameState -eq "Preview") { # If is neither Live nor Finished, output the next game start time and date
+        $mlbtz = $live.gamedata.venue.timezone.tz # Using the venue time zone, determine the user local time for the game start
         $mlboffset = $live.gamedata.venue.timezone.offset
         $timediff = $mlboffset - $locoffset
         $hr,$mn = $live.gamedata.datetime.time.split(':')
         $hr -= $timediff-1 # Uh...will explain this later
+        $startTime = ""+$hr+":"+$mn+$live.gamedata.datetime.ampm # Reassemble into a digestable time format
+
+        # Use the local time to edit scheduled task to run this script again when the game starts
+        # Another scheduled task will run this script at one minute after midnight every day to get the schedule
+        $trigger = New-ScheduledTaskTrigger -At $startTime -Once
+        Set-ScheduledTask -TaskName "Run MLB Linescore" -Trigger $trigger
 
         $row1 = $live.liveData.boxscore.teams.away.team.name+" at "+$live.liveData.boxscore.teams.home.team.name
-        $row2 = "Game starts at "+$hr+":"+$mn+" "+$live.gamedata.datetime.ampm+" "+$loctz+" "+$live.gamedata.datetime.originalDate
+        $row2 = "Game starts at "+$startTime+" "+$loctz+" "
 
         if ($debugOn) { # Write pre-game info to console
             clear-host
@@ -214,12 +220,12 @@ do { # Run script continuously while game is Live
         }
         $gameState = "Final" # Fake out the gameState so the loop ends
     }
-    elseif (($gameState -eq "Live") -or ($gameState -eq "Final")) { 
+    elseif (($gameState -eq "Live") -or ($gameState -eq "Final")) { # If there is game data, play ball!
         $mlb_boxscore  = Invoke-RestMethod -Uri $URI_boxscore
         $mlb_linescore = Invoke-RestMethod -Uri $URI_linescore
         $mlb_pbp       = Invoke-RestMethod -Uri $URI_pbp
 
-        buildLinescore($filePath) # Build a linescore from current or historical data
+        buildLinescore($filePath) # Build a linescore from API data
 
         if ($gameState -eq "Live") {
             do { # Poll DiffPatch for updated data before running thru the entire loop again
