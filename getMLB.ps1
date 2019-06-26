@@ -28,7 +28,6 @@ $URI_live      = $MLB_URL+"/api/v1.1/game/"+$mlb_gamekey+"/feed/live/"
 $URI_diffPatch = $MLB_URL+"/api/v1.1/game/"+$mlb_gamekey+"/feed/live/diffPatch"
 
 function buildLinescore ([string]$outputfile) { # This is where the magic happens
-    # Grab the API data needed to build the line score
     # Start by building the front part of the line score
     $abbr_away = $mlb_boxscore.teams.away.team.abbreviation
     $abbr_home = $mlb_boxscore.teams.home.team.abbreviation
@@ -168,44 +167,49 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
 
 # Get initial timestamp from diffPatch so we're not polling the entire data set until it changes
 $diffPatch = Invoke-RestMethod -Uri $URI_diffPatch
-$newTime = $diffPatch.metaData.timeStamp
-$startTime = $newTime
+$startTime = $diffPatch.metaData.timeStamp
 
-do { # Run script continuously while game is in session
-    # Check game status
+do { # Run script continuously while game is Live
+    # Get game state
     $live = Invoke-RestMethod -Uri $URI_live
     $gameState = $live.gameData.status.abstractGameState
 
-    if ($gameState -eq "Preview") { # If no game is active, output the next game time and date
+    if ($gameState -eq "Preview") { # If no game is Live or Finished, output the next game time and date
         $row1 = $live.liveData.boxscore.teams.away.team.name+" at "+$live.liveData.boxscore.teams.home.team.name
         $row2 = "Game starts at "+$live.gamedata.datetime.time+" "+$live.gamedata.datetime.originalDate
 
-        if ($debugOn) {
+        if ($debugOn) { # Write pre-game info to console
             clear-host
             write-host $row1
             write-host $row2
         }
-        if ($writeOutput) { 
+        if ($writeOutput) { # Write pre-game info to file
             $row1 | out-file -FilePath $filePath -encoding UTF8
             $row2 | out-file -FilePath $filePath -encoding UTF8 -Append
         }
         $gameState = "Final" # Fake out the gameState so the loop ends
     }
-    else {
+    elseif ($gameState -eq "Live") { # While game is Live, poll the API for the buildLinescore function to digest the data
         $mlb_boxscore  = Invoke-RestMethod -Uri $URI_boxscore
         $mlb_linescore = Invoke-RestMethod -Uri $URI_linescore
         $mlb_pbp       = Invoke-RestMethod -Uri $URI_pbp
 
         buildLinescore($filePath)
 
-        do { # Optionally pause before polling diffPatch and continue to poll until a new event happens
+        do { # Poll DiffPatch for updated data before running thru the entire loop again
             Start-Sleep -Second $diffDelay
             $URI_newDiff = $URI_diffPatch+"?startTimecode="+$startTime
             $newDiffPatch = Invoke-RestMethod -Uri $URI_newDiff
         } while (!$newDiffPatch)
 
         # Set most recent updated event timestamp to startTime for next iteration
-        $newTime = $newdiffpatch.metadata.timeStamp
-        $startTime = $newTime
+        $startTime = $newdiffpatch.metadata.timeStamp
+    }
+    elseif ($gameState -eq "Final") { # Do one iteration thru the buildLinescore function to output the result of a finished game
+        $mlb_boxscore  = Invoke-RestMethod -Uri $URI_boxscore
+        $mlb_linescore = Invoke-RestMethod -Uri $URI_linescore
+        $mlb_pbp       = Invoke-RestMethod -Uri $URI_pbp
+
+        buildLinescore($filePath)
     }
 } while ($gameState -ne "Final") # Stop the script when the ballgame is over
