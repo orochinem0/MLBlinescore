@@ -175,10 +175,9 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     $rowS = $InningState+$mlb_linescore.currentInningOrdinal+" "+$mlb_linescore.balls+"-"+$mlb_linescore.strikes+" "+$firstBase+$secondBase+$thirdBase+" "+$outs+"  at "+$mlb_boxscore.teams.home.team.venue.name+" in "+$mlb_boxscore.teams.home.team.locationName
 
     if ($mlb_pbp.currentPlay.result.description) { 
-        #$rowP = $mlb_pbp.currentPlay.result.description 
         $tempArray = ($mlb_pbp.currentPlay.result.description.substring(0,$mlb_pbp.currentPlay.result.description.length)) -split "\s+"
         $rowP = ""
-        for ($i = 0; $i -lt $tempArray.length; $i++) { $rowP += $tempArray[$i]+" " }
+        for ($i = 0; $i -lt $tempArray.length; $i++) { $rowP += $tempArray[$i]+" " } # Kill any excess whitespace
 
     }
     else { # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players        
