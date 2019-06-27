@@ -1,7 +1,7 @@
 ﻿<#
 
 .SYNOPSIS
-
+Using the MLB API, grab live data and build a summary in the style of a line score
 
 .DESCRIPTION
 
@@ -10,9 +10,9 @@
 
 
 .NOTES
+This is meant to iterate over a live game, not a historical one. It only displays the most recent event.
 
-
-.PARAMETER outputfile
+.PARAMETER placeholder
 
 
 #>
@@ -174,10 +174,10 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     # Build current inning status line
     $rowS = $InningState+$mlb_linescore.currentInningOrdinal+" "+$mlb_linescore.balls+"-"+$mlb_linescore.strikes+" "+$firstBase+$secondBase+$thirdBase+" "+$outs+"  at "+$mlb_boxscore.teams.home.team.venue.name+" in "+$mlb_boxscore.teams.home.team.locationName
 
-    if ($mlb_pbp.currentPlay.result.description) { 
+    if ($mlb_pbp.currentPlay.result.description) { # Kill any excess whitespace
         $tempArray = ($mlb_pbp.currentPlay.result.description.substring(0,$mlb_pbp.currentPlay.result.description.length)) -split "\s+"
-        $rowP = ""
-        for ($i = 0; $i -lt $tempArray.length; $i++) { $rowP += $tempArray[$i]+" " } # Kill any excess whitespace
+        $rowP = "" # Zero the play-by-play row in case it has kruft
+        for ($i = 0; $i -lt $tempArray.length; $i++) { $rowP += $tempArray[$i]+" " } # Rebuild with appropriate spacing
 
     }
     else { # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players        
