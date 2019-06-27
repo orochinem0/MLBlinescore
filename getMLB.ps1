@@ -210,9 +210,11 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
         $rowA | out-file -FilePath $filePath -encoding UTF8 -Append
         $rowH | out-file -FilePath $filePath -encoding UTF8 -Append
         $rowS | out-file -FilePath $filePath -encoding UTF8 -Append
-        if ($rowP.length -gt $rowI.length) {
+        $rowLength = $rowI.length
+        if ($rowLength -lt 80) { $rowLength = 80 }
+        if ($rowP.length -gt $rowLength) {
             # Split play description into two lines if it's longer than the line score
-            $tempArray = ($rowP.substring(0,$rowI.length)) -split "\s+"
+            $tempArray = ($rowP.substring(0,$rowLength)) -split "\s+"
             for ($i = 0; $i -lt $tempArray.length-1; $i++) { $rowO += $tempArray[$i]+" " }
             $rowO | out-file -FilePath $filePath -encoding UTF8 -Append
             $rowP = $rowP.substring($rowO.length,$rowP.length-$rowO.length)
@@ -233,10 +235,12 @@ do { # Run script continuously while game is Live
     if ($gameState -eq "Preview") { # If is neither Live nor Finished, output the next game start time and date
         $mlbtz = $live.gamedata.venue.timezone.tz # Using the venue time zone, determine the user local time for the game start
         $mlboffset = $live.gamedata.venue.timezone.offset
-        $timediff = $mlboffset - $locoffset
+        $timediff = $locoffset - $mlboffset # Get the time difference
         $hr,$mn = $live.gamedata.datetime.time.split(':')
-        $hr -= $timediff-1 # Uh...will explain this later
         $startTime = ""+$hr+":"+$mn+$live.gamedata.datetime.ampm # Reassemble into a digestable time format
+        $startTimeObj = [datetime]::parseexact($startTime, 'h:mmtt', $null) # Make it into a time object for magic time math
+        $startTimeObj = $startTimeObj.AddHours($timediff+1)
+        $startTime = $startTimeObj.ToString('hh:mm tt')
 
         # Use the local time to edit scheduled task to run this script again when the game starts
         # Another scheduled task will run this script at one minute after midnight every day to get the schedule
