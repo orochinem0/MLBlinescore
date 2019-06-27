@@ -174,7 +174,13 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     # Build current inning status line
     $rowS = $InningState+$mlb_linescore.currentInningOrdinal+" "+$mlb_linescore.balls+"-"+$mlb_linescore.strikes+" "+$firstBase+$secondBase+$thirdBase+" "+$outs+"  at "+$mlb_boxscore.teams.home.team.venue.name+" in "+$mlb_boxscore.teams.home.team.locationName
 
-    if ($mlb_pbp.currentPlay.result.description) { $rowP = $mlb_pbp.currentPlay.result.description }
+    if ($mlb_pbp.currentPlay.result.description) { 
+        #$rowP = $mlb_pbp.currentPlay.result.description 
+        $tempArray = ($mlb_pbp.currentPlay.result.description.substring(0,$mlb_pbp.currentPlay.result.description.length)) -split "\s+"
+        $rowP = ""
+        for ($i = 0; $i -lt $tempArray.length; $i++) { $rowP += $tempArray[$i]+" " }
+
+    }
     else { # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players        
         $batterID = "ID"+$mlb_pbp.currentPlay.matchup.batter.id
         $pitcherID = "ID"+$mlb_pbp.currentPlay.matchup.pitcher.id
@@ -188,7 +194,7 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
         $OBP = $mlb_boxscore.teams.$batterState.players.$batterID.seasonStats.batting.obp
         $SLG = $mlb_boxscore.teams.$batterState.players.$batterID.seasonStats.batting.slg
 
-        $rowP  = $mlb_pbp.currentPlay.matchup.pitcher.fullName+" (IP "+$IP+", "+$ERA+" ERA) pitching to "+$mlb_pbp.currentPlay.matchup.batter.fullName+" ("+$AVG+"/"+$OBP+"/"+$SLG+")"
+        $rowP = $mlb_pbp.currentPlay.matchup.pitcher.fullName+" (IP "+$IP+", "+$ERA+" ERA) pitching to "+$mlb_pbp.currentPlay.matchup.batter.fullName+" ("+$AVG+"/"+$OBP+"/"+$SLG+")"
     }
 
     if ($debugOn) { # Write line score to the console if debugging is enabled
@@ -201,13 +207,17 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     }
 
     if ($writeOutput) { # Write line score to text file for digestion by external apps if enabled
-        if ($rowP.length -gt $rowI.length) {
-            # Split play description into two lines if it's longer than the line score
-        }
         $rowI | out-file -FilePath $filePath -encoding UTF8
         $rowA | out-file -FilePath $filePath -encoding UTF8 -Append
         $rowH | out-file -FilePath $filePath -encoding UTF8 -Append
         $rowS | out-file -FilePath $filePath -encoding UTF8 -Append
+        if ($rowP.length -gt $rowI.length) {
+            # Split play description into two lines if it's longer than the line score
+            $tempArray = ($rowP.substring(0,$rowI.length)) -split "\s+"
+            for ($i = 0; $i -lt $tempArray.length-1; $i++) { $rowO += $tempArray[$i]+" " }
+            $rowO | out-file -FilePath $filePath -encoding UTF8 -Append
+            $rowP = $rowP.substring($rowO.length,$rowP.length-$rowO.length)
+        }
         $rowP | out-file -FilePath $filePath -encoding UTF8 -Append
     }
 }
