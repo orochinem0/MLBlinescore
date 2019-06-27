@@ -101,13 +101,13 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
         # Write individual inning data
         $rowA += "$delimiter"
         if ($runsA -lt 10) { $rowA += " " } # Pad short numbers
-        if ($i -gt 9) { $rowA += " "} # Pad extra innings
+        if ($i -gt 8) { $rowA += " "} # Pad extra innings
         if ($runsA -eq $null) { $rowA += "   " }
         else { $rowA += " $runsA " }
 
         $rowH += "$delimiter"
         if ($runsH -lt 10) { $rowH += " " }
-        if ($i -gt 9) { $rowH += " "}
+        if ($i -gt 8) { $rowH += " "}
         if ($runsH -eq $null) { $rowH += "   " }
         else { $rowH += " $runsH " }
 
@@ -175,14 +175,20 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     $rowS = $InningState+$mlb_linescore.currentInningOrdinal+" "+$mlb_linescore.balls+"-"+$mlb_linescore.strikes+" "+$firstBase+$secondBase+$thirdBase+" "+$outs+"  at "+$mlb_boxscore.teams.home.team.venue.name+" in "+$mlb_boxscore.teams.home.team.locationName
 
     if ($mlb_pbp.currentPlay.result.description) { $rowP = $mlb_pbp.currentPlay.result.description }
-    else { # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players
-        $URI_batterstats   = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.batter.id+"/stats/?stats=career&group=hitting&season=2019"
-        $URI_pitcherstats  = $MLB_URL+"/api/v1/people/"+$mlb_pbp.currentPlay.matchup.pitcher.id+"/stats?stats=career&group=pitching&season=2019"
+    else { # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players        
+        $batterID = "ID"+$mlb_pbp.currentPlay.matchup.batter.id
+        $pitcherID = "ID"+$mlb_pbp.currentPlay.matchup.pitcher.id
 
-        $batterstats  = Invoke-RestMethod -Uri $URI_batterstats
-        $pitcherstats = Invoke-RestMethod -Uri $URI_pitcherstats
+        if ($mlb_boxscore.teams.home.players.$pitcherID) { $pitcherState = "home" } else { $pitcherState = "away" }
+        $ERA = $mlb_boxscore.teams.$pitcherState.players.$pitcherID.seasonStats.pitching.era 
+        $IP  = $mlb_boxscore.teams.$pitcherState.players.$pitcherID.stats.pitching.inningsPitched
 
-        $rowP  = $mlb_pbp.currentPlay.matchup.pitcher.fullName+" ("+$pitcherstats.stats.splits.stat.era+" ERA) pitching to "+$mlb_pbp.currentPlay.matchup.batter.fullName+" ("+$batterstats.stats.splits.stat.avg+"/"+$batterstats.stats.splits.stat.obp+"/"+$batterstats.stats.splits.stat.slg+")"
+        if ($mlb_boxscore.teams.home.players.$batterID) { $batterState = "home" } else { $batterState = "away" }
+        $AVG = $mlb_boxscore.teams.$batterState.players.$batterID.seasonStats.batting.avg
+        $OBP = $mlb_boxscore.teams.$batterState.players.$batterID.seasonStats.batting.obp
+        $SLG = $mlb_boxscore.teams.$batterState.players.$batterID.seasonStats.batting.slg
+
+        $rowP  = $mlb_pbp.currentPlay.matchup.pitcher.fullName+" (IP "+$IP+", "+$ERA+" ERA) pitching to "+$mlb_pbp.currentPlay.matchup.batter.fullName+" ("+$AVG+"/"+$OBP+"/"+$SLG+")"
     }
 
     if ($debugOn) { # Write line score to the console if debugging is enabled
@@ -195,6 +201,9 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     }
 
     if ($writeOutput) { # Write line score to text file for digestion by external apps if enabled
+        if ($rowP.length -gt $rowI.length) {
+            # Split play description into two lines if it's longer than the line score
+        }
         $rowI | out-file -FilePath $filePath -encoding UTF8
         $rowA | out-file -FilePath $filePath -encoding UTF8 -Append
         $rowH | out-file -FilePath $filePath -encoding UTF8 -Append
