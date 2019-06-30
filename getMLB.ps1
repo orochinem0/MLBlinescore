@@ -1,33 +1,37 @@
 ﻿<#
-
 .SYNOPSIS
 Using the MLB API, grab live data and build a summary in the style of a line score
 
 .DESCRIPTION
 
-
 .EXAMPLE
-
 
 .NOTES
 This is meant to iterate over a live game, not a historical one. It only displays the most recent event.
 
-.PARAMETER placeholder
+.PARAMETER filePath
+Path to write file. Default is my own local.
 
+.PARAMETER debugOn
+Write to console while running if true
+
+.PARAMETER writeOutput
+Write to file location defined above if true
+
+.PARAMETER verbose
+Output verbose logging to the console
 
 #>
 
+[CmdletBinding()]
+Param (
+    $filePath          = 'C:\Users\yt\Documents\Twitch Assets\mlbscore.txt',
+    [bool]$debugOn     = $true,
+    [bool]$writeOutput = $true
+)
+
 # Includes
 . "$PSScriptRoot\cMLB.ps1" # Config file
-
-# The data that sets the wheels into motion - team and date
-# You can pick a past date to get a specific game's final outcome
-# However, this code is not intended to iterate through a past game
-# The intended use is to determine the current day and date and let the script iterate over a live game a specific team is playing
-# It should stop when the live game is over
-# If the game is upcoming, it should output the teams playing and when the game will start
-$teamID = $NYM # Team codes and corresponding team IDs stored in the config
-$MLB_today = Get-Date -format "MM/dd/yyyy"
 
 # Get the current gamePk, or game specific ID, based on the team and date set above
 # You could also set this parameter by any number of inputs, so feel free to get creative
@@ -40,13 +44,10 @@ if ($mlb_games.totalGames) {
 }
 
 # Common URIs
-$URI_boxscore  = $MLB_URL+"/api/v1/game/"+$mlb_gamekey+"/boxscore"
-$URI_linescore = $MLB_URL+"/api/v1/game/"+$mlb_gamekey+"/linescore"
-$URI_pbp       = $MLB_URL+"/api/v1/game/"+$mlb_gamekey+"/playByPlay"
-$URI_live      = $MLB_URL+"/api/v1.1/game/"+$mlb_gamekey+"/feed/live/"
-$URI_diffPatch = $MLB_URL+"/api/v1.1/game/"+$mlb_gamekey+"/feed/live/diffPatch"
+$URI_live    = $MLB_URL+"/api/v1.1/game/"+$mlb_gamekey+"/feed/live/"
+$URI_newDiff = $URI_live+"?fields=metaData%2CtimeStamp"
 
-function buildLinescore ([string]$outputfile) { # This is where the magic happens
+function buildLinescore ([PSObject]$live,[string]$outputfile) { # This is where the magic happens
     <#
 
     .SYNOPSIS
@@ -65,38 +66,41 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     .NOTES
     Not using proper OOP so far
 
+    .PARAMETER live
+    Array of live data from the MLB AP
+
     .PARAMETER outputfile
     Path to a writeable text file. No validation is made on this step
 
     #>
 
     # Start by building the front part of the line score
-    $abbr_away = $mlb_boxscore.teams.away.team.abbreviation
-    $abbr_home = $mlb_boxscore.teams.home.team.abbreviation
+    $abbr_away = $live.gameData.teams.away.abbreviation
+    $abbr_home = $live.gameData.teams.home.abbreviation
     if ($abbr_away.length -lt 3) { $abbr_away += " " } # Pad shorter team abbreviations
     if ($abbr_home.length -lt 3) { $abbr_home += " " }
 
     # Add win/loss percentage to team names
-    $away_record = $mlb_boxscore.teams.away.team.record.winningPercentage
-    $home_record = $mlb_boxscore.teams.home.team.record.winningPercentage
+    $away_record = $live.gameData.teams.away.record.winningPercentage
+    $home_record = $live.gameData.teams.home.record.winningPercentage
 
     # Capture the RHE data for both teams
-    $away_runs = $mlb_linescore.teams.away.runs
-    $away_hits = $mlb_linescore.teams.away.hits
-    $away_errs = $mlb_linescore.teams.away.errors
+    $away_runs = $live.liveData.linescore.teams.away.runs
+    $away_hits = $live.liveData.linescore.teams.away.hits
+    $away_errs = $live.liveData.linescore.teams.away.errors
 
-    $home_runs = $mlb_linescore.teams.home.runs
-    $home_hits = $mlb_linescore.teams.home.hits
-    $home_errs = $mlb_linescore.teams.home.errors
+    $home_runs = $live.liveData.linescore.teams.home.runs
+    $home_hits = $live.liveData.linescore.teams.home.hits
+    $home_errs = $live.liveData.linescore.teams.home.errors
 
     # Build the front for each row in the line score
     $rowI = "           $delimiter"
     $rowA = "$abbr_away ($away_record) $delimiter"
     $rowH = "$abbr_home ($home_record) $delimiter"
 
-    for ($i=0; $i -lt $mlb_linescore.currentInning; $i++) { # Iterate thru the innings and build the line score
-        $runsA = $mlb_linescore.innings[$i].away.runs
-        $runsH = $mlb_linescore.innings[$i].home.runs
+    for ($i=0; $i -lt $live.liveData.linescore.currentInning; $i++) { # Iterate thru the innings and build the line score
+        $runsA = $live.liveData.linescore.innings[$i].away.runs
+        $runsH = $live.liveData.linescore.innings[$i].home.runs
 
         # Write individual inning data
         $rowA += "$delimiter"
@@ -146,7 +150,7 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     if ($home_errs -eq $null) { $rowH += " " }
     $rowH += "$home_errs $delimiter$delimiter"
 
-    $inningState = switch ($mlb_linescore.inningState) { # Shapes defined in config
+    $inningState = switch ($live.liveData.linescore.inningState) { # Shapes defined in config
         "Top"    { $top }
         "Bottom" { $bottom }
         "Middle" { $middle }
@@ -154,16 +158,16 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     }
 
     # Shapes defined in config
-    if ($MLB_linescore.offense.first) { $firstBase = "1"+$baseOn }
+    if ($live.liveData.linescore.offense.first) { $firstBase = "1"+$baseOn }
     else { $firstBase = "1"+$baseOff }
 
-    if ($MLB_linescore.offense.second) { $secondBase = "2"+$baseOn }
+    if ($live.liveData.linescore.offense.second) { $secondBase = "2"+$baseOn }
     else { $secondBase = "2"+$baseOff }
 
-    if ($MLB_linescore.offense.third) { $thirdBase = "3"+$baseOn }
+    if ($live.liveData.linescore.offense.third) { $thirdBase = "3"+$baseOn }
     else { $thirdBase = "3"+$baseOff }
 
-    $outs = switch ($mlb_linescore.outs) { # Shapes defined in config
+    $outs = switch ($live.liveData.linescore.outs) { # Shapes defined in config
         "0" { $outOff+""+$outOff }
         "1" { $outOn+""+$outOff }
         "2" { $outOn+""+$outOn }
@@ -172,28 +176,30 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     }
 
     # Build current inning status line
-    $rowS = $InningState+$mlb_linescore.currentInningOrdinal+" "+$mlb_linescore.balls+"-"+$mlb_linescore.strikes+" "+$firstBase+$secondBase+$thirdBase+" "+$outs+"  at "+$mlb_boxscore.teams.home.team.venue.name+" in "+$mlb_boxscore.teams.home.team.locationName
+    $rowS = $InningState+$live.liveData.linescore.currentInningOrdinal+" "+$live.liveData.linescore.balls+"-"+$live.liveData.linescore.strikes+" "+$firstBase+$secondBase+$thirdBase+" "+$outs+"  at "+$live.gameData.teams.home.venue.name+" in "+$live.gameData.teams.home.locationName
 
-    if ($mlb_pbp.currentPlay.result.description) { # Kill any excess whitespace
-        $tempArray = ($mlb_pbp.currentPlay.result.description.substring(0,$mlb_pbp.currentPlay.result.description.length)) -split "\s+"
+    $currentPlay = $live.liveData.plays.currentPlay.result.description
+
+    if ($currentPlay) { # Kill any excess whitespace
+        $tempArray = ($currentPlay.substring(0,$currentPlay.length)) -split "\s+"
         $rowP = "" # Zero the play-by-play row in case it has kruft
         for ($i = 0; $i -lt $tempArray.length; $i++) { $rowP += $tempArray[$i]+" " } # Rebuild with appropriate spacing
 
     }
     else { # Poll API to get current play-by-play info, and if there isn't any, build pitching and batting stats line for the current players        
-        $batterID = "ID"+$mlb_pbp.currentPlay.matchup.batter.id
-        $pitcherID = "ID"+$mlb_pbp.currentPlay.matchup.pitcher.id
+        $pitcherID  = "ID"+$live.liveData.plays.currentPlay.matchup.pitcher.id
+        if ($live.liveData.boxscore.teams.home.players.$pitcherID) { $pitcherState = "home" } else { $pitcherState = "away" }
+        $ERA        = $live.liveData.boxscore.teams.$pitcherState.players.$pitcherID.seasonStats.pitching.era 
+        $IP         = $live.liveData.boxscore.teams.$pitcherState.players.$pitcherID.stats.pitching.inningsPitched
+        $pitchCount = $live.liveData.boxscore.teams.$pitcherState.players.$pitcherID.stats.pitching.numberOfPitches
 
-        if ($mlb_boxscore.teams.home.players.$pitcherID) { $pitcherState = "home" } else { $pitcherState = "away" }
-        $ERA = $mlb_boxscore.teams.$pitcherState.players.$pitcherID.seasonStats.pitching.era 
-        $IP  = $mlb_boxscore.teams.$pitcherState.players.$pitcherID.stats.pitching.inningsPitched
+        $batterID = "ID"+$live.liveData.plays.currentPlay.matchup.batter.id
+        if ($live.liveData.boxscore.teams.home.players.$batterID) { $batterState = "home" } else { $batterState = "away" }
+        $AVG      = $live.liveData.boxscore.teams.$batterState.players.$batterID.seasonStats.batting.avg
+        $OBP      = $live.liveData.boxscore.teams.$batterState.players.$batterID.seasonStats.batting.obp
+        $SLG      = $live.liveData.boxscore.teams.$batterState.players.$batterID.seasonStats.batting.slg
 
-        if ($mlb_boxscore.teams.home.players.$batterID) { $batterState = "home" } else { $batterState = "away" }
-        $AVG = $mlb_boxscore.teams.$batterState.players.$batterID.seasonStats.batting.avg
-        $OBP = $mlb_boxscore.teams.$batterState.players.$batterID.seasonStats.batting.obp
-        $SLG = $mlb_boxscore.teams.$batterState.players.$batterID.seasonStats.batting.slg
-
-        $rowP = $mlb_pbp.currentPlay.matchup.pitcher.fullName+" (IP "+$IP+", "+$ERA+" ERA) pitching to "+$mlb_pbp.currentPlay.matchup.batter.fullName+" ("+$AVG+"/"+$OBP+"/"+$SLG+")"
+        $rowP = $live.liveData.plays.currentPlay.matchup.pitcher.fullName+" ("+$ERA+" ERA) pitching to "+$live.liveData.plays.currentPlay.matchup.batter.fullName+" ("+$AVG+"/"+$OBP+"/"+$SLG+")"
     }
 
     if ($debugOn) { # Write line score to the console if debugging is enabled
@@ -211,7 +217,7 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
         $rowH | out-file -FilePath $filePath -encoding UTF8 -Append
         $rowS | out-file -FilePath $filePath -encoding UTF8 -Append
         $rowLength = $rowI.length
-        if ($rowLength -lt 80) { $rowLength = 80 }
+        if ($rowLength -lt $lineMax) { $rowLength = $lineMax }
         if ($rowP.length -gt $rowLength) {
             # Split play description into two lines if it's longer than the line score
             $tempArray = ($rowP.substring(0,$rowLength)) -split "\s+"
@@ -223,21 +229,19 @@ function buildLinescore ([string]$outputfile) { # This is where the magic happen
     }
 }
 
-# Get initial timestamp from diffPatch so we're not polling the entire data set until it changes
-$diffPatch = Invoke-RestMethod -Uri $URI_diffPatch
-$startTime = $diffPatch.metaData.timeStamp
+# Get initial data
+$liveData = Invoke-RestMethod -Uri $URI_live
 
 do { # Run script continuously while game is Live
     # Get game state
-    $live = Invoke-RestMethod -Uri $URI_live
-    $gameState = $live.gameData.status.abstractGameState
+    $gameState = $liveData.gameData.status.abstractGameState
+    $wait      = $liveData.metadata.wait
 
     if ($gameState -eq "Preview") { # If is neither Live nor Finished, output the next game start time and date
-        $mlbtz = $live.gamedata.venue.timezone.tz # Using the venue time zone, determine the user local time for the game start
-        $mlboffset = $live.gamedata.venue.timezone.offset
+        $mlboffset = $liveData.gamedata.venue.timezone.offset
         $timediff = $locoffset - $mlboffset # Get the time difference
-        $hr,$mn = $live.gamedata.datetime.time.split(':')
-        $startTime = ""+$hr+":"+$mn+$live.gamedata.datetime.ampm # Reassemble into a digestable time format
+        $hr,$mn = $liveData.gamedata.datetime.time.split(':')
+        $startTime = ""+$hr+":"+$mn+$liveData.gamedata.datetime.ampm # Reassemble into a digestable time format
         $startTimeObj = [datetime]::parseexact($startTime, 'h:mmtt', $null) # Make it into a time object for magic time math
         $startTimeObj = $startTimeObj.AddHours($timediff+1)
         $startTime = $startTimeObj.ToString('hh:mm tt')
@@ -247,7 +251,7 @@ do { # Run script continuously while game is Live
         $trigger = New-ScheduledTaskTrigger -At $startTime -Once
         Set-ScheduledTask -TaskName "Run MLB Linescore" -Trigger $trigger
 
-        $row1 = $live.liveData.boxscore.teams.away.team.name+" at "+$live.liveData.boxscore.teams.home.team.name
+        $row1 = $liveData.liveData.boxscore.teams.away.team.name+" at "+$liveData.liveData.boxscore.teams.home.team.name
         $row2 = "Game starts at "+$startTime+" "+$loctz
 
         if ($debugOn) { # Write pre-game info to console
@@ -262,22 +266,19 @@ do { # Run script continuously while game is Live
         $gameState = "Final" # Fake out the gameState so the loop ends
     }
     elseif (($gameState -eq "Live") -or ($gameState -eq "Final")) { # If there is game data, play ball!
-        $mlb_boxscore  = Invoke-RestMethod -Uri $URI_boxscore
-        $mlb_linescore = Invoke-RestMethod -Uri $URI_linescore
-        $mlb_pbp       = Invoke-RestMethod -Uri $URI_pbp
+        $liveData = Invoke-RestMethod -Uri $URI_live
 
-        buildLinescore($filePath) # Build a linescore from API data
+        buildLinescore($liveData,$filePath) # Build a linescore from API data
 
         if ($gameState -eq "Live") {
             do { # Poll DiffPatch for updated data before running thru the entire loop again
-                Start-Sleep -Second $diffDelay
-                $URI_newDiff = $URI_diffPatch+"?startTimecode="+$startTime
+                Start-Sleep -Second $wait
                 $newDiffPatch = Invoke-RestMethod -Uri $URI_newDiff
-            } while (!$newDiffPatch)
+            } while ($newDiffPatch.metadata.timeStamp -eq $startTime)
 
             # Set most recent updated event timestamp to startTime for next iteration
             $startTime = $newdiffpatch.metadata.timeStamp
-            buildLinescore($filePath) # Build a linescore from API data
+
         }
     }
 } while ($gameState -ne "Final") # Stop the script when the ballgame is over

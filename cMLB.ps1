@@ -3,16 +3,11 @@
 # API URL
 $MLB_URL = "https://statsapi.mlb.com"
 
-# Where to write locally, and whether to write to file or console
-$filePath    = "C:\Users\yt\Documents\Twitch Assets\mlbscore.txt"
-$debugOn     = $true
-$writeOutput = $true
-
 # Time zone constants
 $loctz = [Regex]::Replace([System.TimeZoneInfo]::Local.StandardName, '([A-Z])\w+\s*', '$1')
 $locoffset = [System.TimeZoneInfo]::Local.BaseUtcOffset.Hours
 
-# Teams table
+# Teams IDs table
 $LAA = 108
 $ARI = 109
 $BAL = 110
@@ -54,5 +49,18 @@ $top       = [char]0x25B2 # Upward pointing filled triangle
 $bottom    = [char]0x25BC # Downward pointing filled triangle
 $middle    = [char]0x2B0C # Horizontal double-headed arrow
 
+# Assorted interface bits
+$lineMax = 94
+
 # Polling delay, in seconds
-$diffDelay = 3
+# Currently getting this from the live API's "wait" property
+#$diffDelay = 1
+
+# The data that sets the wheels into motion - team and date
+# You can pick a past date to get a specific game's final outcome
+# However, this code is not intended to iterate through a past game
+# The intended use is to determine the current day and date and let the script iterate over a live game a specific team is playing
+# It should stop when the live game is over
+# If the game is upcoming, it should output the teams playing and when the game will start
+$teamID = $STL # Team codes and corresponding team IDs stored in the config
+$MLB_today = Get-Date -format "MM/dd/yyyy"
