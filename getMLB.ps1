@@ -94,9 +94,9 @@ function buildLinescore ([PSObject]$live,[string]$outputfile) { # This is where 
     $home_errs = $live.liveData.linescore.teams.home.errors
 
     # Build the front for each row in the line score
-    $rowI = "           $delimiter"
-    $rowA = "$abbr_away ($away_record) $delimiter"
-    $rowH = "$abbr_home ($home_record) $delimiter"
+    $rowI = "$line$line$line$line$line$line$line$line$line$line$line"
+    $rowA = "$abbr_away ($away_record) "
+    $rowH = "$abbr_home ($home_record) "
 
     for ($i=0; $i -lt $live.liveData.linescore.currentInning; $i++) { # Iterate thru the innings and build the line score
         $runsA = $live.liveData.linescore.innings[$i].away.runs
@@ -115,14 +115,14 @@ function buildLinescore ([PSObject]$live,[string]$outputfile) { # This is where 
         if ($runsH -eq $null) { $rowH += "   " }
         else { $rowH += " $runsH " }
 
-        $rowI += "$delimiter  "+($i+1)+" "
+        $rowI += "$ttop$line "+($i+1)+" "
     }
 
     # Write runs, hits, and errors data with proper spacing
-    $rowI += "$delimiter$delimiter  R $delimiter  H $delimiter  E $delimiter$delimiter"
+    $rowI += "$dbltop$line R $ttop$line H $ttop$line E $dblL"
 
     # Away
-    $rowA += "$delimiter$delimiter "
+    $rowA += "$dblline "
     if ($away_runs -lt 10) { $rowA += " " }
     if ($away_runs -eq $null) { $rowA += " " }
     $rowA += "$away_runs $delimiter "
@@ -133,11 +133,11 @@ function buildLinescore ([PSObject]$live,[string]$outputfile) { # This is where 
 
     if ($away_errs -lt 10) { $rowA += " " }
     if ($away_errs -eq $null) { $rowA += " " }
-    $rowA += "$away_errs $delimiter$delimiter"
+    $rowA += "$away_errs $dblline"
     if ($away_runs -lt 10) { $rowA += " " }
 
     # Home Runs
-    $rowH += "$delimiter$delimiter "
+    $rowH += "$dblline "
     if ($home_runs -lt 10) { $rowH += " " }
     if ($home_runs -eq $null) { $rowH += " " }
     $rowH += "$home_runs $delimiter "
@@ -148,13 +148,13 @@ function buildLinescore ([PSObject]$live,[string]$outputfile) { # This is where 
 
     if ($home_errs -lt 10) { $rowH += " " }
     if ($home_errs -eq $null) { $rowH += " " }
-    $rowH += "$home_errs $delimiter$delimiter"
+    $rowH += "$home_errs $dblline"
 
     $inningState = switch ($live.liveData.linescore.inningState) { # Shapes defined in config
         "Top"    { $top }
         "Bottom" { $bottom }
         "Middle" { $middle }
-        default  { "" } # Any other inning status is blank
+        default  { "  " } # Any other inning status is blank
     }
 
     # Shapes defined in config
@@ -168,20 +168,21 @@ function buildLinescore ([PSObject]$live,[string]$outputfile) { # This is where 
     else { $thirdBase = "3"+$baseOff }
 
     $outs = switch ($live.liveData.linescore.outs) { # Shapes defined in config
-        "0" { $outOff+""+$outOff }
-        "1" { $outOn+""+$outOff }
-        "2" { $outOn+""+$outOn }
-        "3" { $outOn+""+$outOn }
-        default { "" } # This should never happen, but sports are weird
+        "0" { $outOff+""+$outOff+""+$outOff }
+        "1" { $outOn+""+$outOff+""+$outOff }
+        "2" { $outOn+""+$outOn+""+$outOff }
+        "3" { $outOn+""+$outOn+""+$outOn }
+        default { "  " } # This should never happen, but sports are weird
     }
 
     # Build current inning status line
-    $rowS = $InningState+$live.liveData.linescore.currentInningOrdinal+" "+$live.liveData.linescore.balls+"-"+$live.liveData.linescore.strikes+" "+$firstBase+$secondBase+$thirdBase+" "+$outs+"  at "+$live.gameData.teams.home.venue.name+" in "+$live.gameData.teams.home.locationName
+    # Pad inning numbers if needed
+    $rowS = $InningState+$live.liveData.linescore.currentInningOrdinal+"  "+$live.liveData.linescore.balls+"-"+$live.liveData.linescore.strikes+"  "+$firstBase+"  "+$secondBase+"  "+$thirdBase+"  "+$outs+"  at  "+$live.gameData.teams.home.venue.name+" in "+$live.gameData.teams.home.locationName
 
     $currentPlay = $live.liveData.plays.currentPlay.result.description
 
-    if ($currentPlay) { # Kill any excess whitespace
-        $tempArray = ($currentPlay.substring(0,$currentPlay.length)) -split "\s+"
+    if ($currentPlay) { # Break the play-by-play row if it's long
+        $tempArray = ($currentPlay.substring(0,$currentPlay.length)) -split "\s+" # Kill any excess whitespace
         $rowP = "" # Zero the play-by-play row in case it has kruft
         for ($i = 0; $i -lt $tempArray.length; $i++) { $rowP += $tempArray[$i]+" " } # Rebuild with appropriate spacing
 
@@ -278,7 +279,6 @@ do { # Run script continuously while game is Live
 
             # Set most recent updated event timestamp to startTime for next iteration
             $startTime = $newdiffpatch.metadata.timeStamp
-
         }
     }
 } while ($gameState -ne "Final") # Stop the script when the ballgame is over

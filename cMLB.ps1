@@ -48,9 +48,16 @@ $outOff    = [char]0x26AA # Open circle
 $top       = [char]0x25B2 # Upward pointing filled triangle
 $bottom    = [char]0x25BC # Downward pointing filled triangle
 $middle    = [char]0x2B0C # Horizontal double-headed arrow
+$cornerL   = [char]0x2510
+$cornerR   = [char]0x250C
+$line      = [char]0x2500 # Horizontal line
+$dblline   = [char]0x2551 # Double vertical line
+$dbltop    = [char]0x2565 # Double vertical with a single topper
+$ttop      = [char]0x252C # Single vertical with single topper
+$dblL      = [char]0x2556 # Double vertical with single left hanger
 
 # Assorted interface bits
-$lineMax = 94
+$lineMax = 90
 
 # Polling delay, in seconds
 # Currently getting this from the live API's "wait" property
@@ -62,5 +69,5 @@ $lineMax = 94
 # The intended use is to determine the current day and date and let the script iterate over a live game a specific team is playing
 # It should stop when the live game is over
 # If the game is upcoming, it should output the teams playing and when the game will start
-$teamID = $STL # Team codes and corresponding team IDs stored in the config
+$teamID = $NYM # Team codes and corresponding team IDs stored in the config
 $MLB_today = Get-Date -format "MM/dd/yyyy"
