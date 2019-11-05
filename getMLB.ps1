@@ -57,11 +57,11 @@ function buildLinescore ([PSObject]$live,[string]$outputfile) { # This is where 
     Using live MLB API data, parses the data into tokens and arranges into a text-based linescore, which can then be written to the console or to a text file for digestion by another application, such as an OBS stream
 
     .EXAMPLE
-               ││  1 │  2 │  3 │  4 │  5 │  6 ││  R │  H │  E ││
-    NYM (.468) ││  2 │  1 │  1 │  0 │  0 │  1 ││  5 │  9 │  0 ││ 
-    PHI (.513) ││  1 │  0 │  0 │  1 │  0 │    ││  2 │  4 │  2 ││
-    ▼6th 1-1 1◆2◇3◇ ⚫⚪  at Citizens Bank Park in Philadelphia
-    Rhys Hoskins pops out to catcher Wilson Ramos in foul territory.  
+───────────┬─ 1 ┬─ 2 ┬─ 3 ┬─ 4 ┬─ 5 ┬─ 6 ┬─ 7 ╥─ R ┬─ H ┬─ E ╖
+ATL (.602) │  1 │  0 │  0 │  2 │  0 │  0 │    ║  3 │  5 │  0 ║ 
+NYM (.528) │  3 │  0 │  0 │  0 │  0 │  0 │    ║  3 │  7 │  0 ║
+▲7th  1-2  1◆  2◇  3◇  ⚫⚫⚪  at  Citi Field in New York
+Noah Syndergaard (4.29 ERA) pitching to Dansby Swanson (.251/.325/.423) 
 
     .NOTES
     Not using proper OOP so far
