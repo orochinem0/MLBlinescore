@@ -57,11 +57,11 @@ function buildLinescore ([PSObject]$live,[string]$outputfile) { # This is where 
     Using live MLB API data, parses the data into tokens and arranges into a text-based linescore, which can then be written to the console or to a text file for digestion by another application, such as an OBS stream
 
     .EXAMPLE
-───────────┬─ 1 ┬─ 2 ┬─ 3 ┬─ 4 ┬─ 5 ┬─ 6 ┬─ 7 ╥─ R ┬─ H ┬─ E ╖
-ATL (.602) │  1 │  0 │  0 │  2 │  0 │  0 │    ║  3 │  5 │  0 ║ 
-NYM (.528) │  3 │  0 │  0 │  0 │  0 │  0 │    ║  3 │  7 │  0 ║
-▲7th  1-2  1◆  2◇  3◇  ⚫⚫⚪  at  Citi Field in New York
-Noah Syndergaard (4.29 ERA) pitching to Dansby Swanson (.251/.325/.423) 
+    ───────────┬─ 1 ┬─ 2 ┬─ 3 ┬─ 4 ┬─ 5 ┬─ 6 ┬─ 7 ╥─ R ┬─ H ┬─ E ╖
+    ATL (.602) │  1 │  0 │  0 │  2 │  0 │  0 │    ║  3 │  5 │  0 ║ 
+    NYM (.528) │  3 │  0 │  0 │  0 │  0 │  0 │    ║  3 │  7 │  0 ║
+    ▲7th  1-2  1◆  2◇  3◇  ⚫⚫⚪  at  Citi Field in New York
+    Noah Syndergaard (4.29 ERA) pitching to Dansby Swanson (.251/.325/.423) 
 
     .NOTES
     Not using proper OOP so far
@@ -106,13 +106,13 @@ Noah Syndergaard (4.29 ERA) pitching to Dansby Swanson (.251/.325/.423)
         $rowA += "$delimiter"
         if ($runsA -lt 10) { $rowA += " " } # Pad short numbers
         if ($i -gt 8) { $rowA += " "} # Pad extra innings
-        if ($runsA -eq $null) { $rowA += "   " }
+        if ($null -eq $runsA) { $rowA += "   " }
         else { $rowA += " $runsA " }
 
         $rowH += "$delimiter"
         if ($runsH -lt 10) { $rowH += " " }
         if ($i -gt 8) { $rowH += " "}
-        if ($runsH -eq $null) { $rowH += "   " }
+        if ($null -eq $runsH) { $rowH += "   " }
         else { $rowH += " $runsH " }
 
         $rowI += "$ttop$line "+($i+1)+" "
@@ -124,30 +124,30 @@ Noah Syndergaard (4.29 ERA) pitching to Dansby Swanson (.251/.325/.423)
     # Away
     $rowA += "$dblline "
     if ($away_runs -lt 10) { $rowA += " " }
-    if ($away_runs -eq $null) { $rowA += " " }
+    if ($null -eq $away_runs) { $rowA += " " }
     $rowA += "$away_runs $delimiter "
 
     if ($away_hits -lt 10) { $rowA += " " }
-    if ($away_hits -eq $null) { $rowA += " " }
+    if ($null -eq $away_hits) { $rowA += " " }
     $rowA += "$away_hits $delimiter "
 
     if ($away_errs -lt 10) { $rowA += " " }
-    if ($away_errs -eq $null) { $rowA += " " }
+    if ($null -eq $away_errs) { $rowA += " " }
     $rowA += "$away_errs $dblline"
     if ($away_runs -lt 10) { $rowA += " " }
 
     # Home Runs
     $rowH += "$dblline "
     if ($home_runs -lt 10) { $rowH += " " }
-    if ($home_runs -eq $null) { $rowH += " " }
+    if ($null -eq $home_runs) { $rowH += " " }
     $rowH += "$home_runs $delimiter "
 
     if ($home_hits -lt 10) { $rowH += " " }
-    if ($home_hits -eq $null) { $rowH += " " }
+    if ($null -eq $home_hits) { $rowH += " " }
     $rowH += "$home_hits $delimiter "
 
     if ($home_errs -lt 10) { $rowH += " " }
-    if ($home_errs -eq $null) { $rowH += " " }
+    if ($null -eq $home_errs) { $rowH += " " }
     $rowH += "$home_errs $dblline"
 
     $inningState = switch ($live.liveData.linescore.inningState) { # Shapes defined in config
@@ -191,8 +191,8 @@ Noah Syndergaard (4.29 ERA) pitching to Dansby Swanson (.251/.325/.423)
         $pitcherID  = "ID"+$live.liveData.plays.currentPlay.matchup.pitcher.id
         if ($live.liveData.boxscore.teams.home.players.$pitcherID) { $pitcherState = "home" } else { $pitcherState = "away" }
         $ERA        = $live.liveData.boxscore.teams.$pitcherState.players.$pitcherID.seasonStats.pitching.era 
-        $IP         = $live.liveData.boxscore.teams.$pitcherState.players.$pitcherID.stats.pitching.inningsPitched
-        $pitchCount = $live.liveData.boxscore.teams.$pitcherState.players.$pitcherID.stats.pitching.numberOfPitches
+        #$IP         = $live.liveData.boxscore.teams.$pitcherState.players.$pitcherID.stats.pitching.inningsPitched
+        #$pitchCount = $live.liveData.boxscore.teams.$pitcherState.players.$pitcherID.stats.pitching.numberOfPitches
 
         $batterID = "ID"+$live.liveData.plays.currentPlay.matchup.batter.id
         if ($live.liveData.boxscore.teams.home.players.$batterID) { $batterState = "home" } else { $batterState = "away" }
