@@ -1,5 +1,5 @@
 # MLBlinescore
-Powershell app to pull data from the MLB API in order to build a linescore that can then be added to an OBS stream
+Powershell script to pull data from the MLB API in order to build a linescore that can then be added to an OBS stream
 
     .EXAMPLE
     ───────────┬─ 1 ┬─ 2 ┬─ 3 ┬─ 4 ┬─ 5 ┬─ 6 ┬─ 7 ╥─ R ┬─ H ┬─ E ╖
