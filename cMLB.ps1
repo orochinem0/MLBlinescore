@@ -57,7 +57,7 @@ $ttop      = [char]0x252C # Single vertical with single topper
 $dblL      = [char]0x2556 # Double vertical with single left hanger
 
 # Assorted interface bits
-$lineMax = 90
+$lineMax = 90 # Breaks the info line under the linescore so it doesn't overrun the width of the screen
 
 # Polling delay, in seconds
 # Currently getting this from the live API's "wait" property
