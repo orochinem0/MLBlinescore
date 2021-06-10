@@ -38,36 +38,36 @@ $loctz = [Regex]::Replace([System.TimeZoneInfo]::Local.StandardName, '([A-Z])\w+
 $locoffset = [System.TimeZoneInfo]::Local.BaseUtcOffset.Hours
 
 # Teams IDs table
-$LAA = 108
-$ARI = 109
-$BAL = 110
-$BOS = 111
-$CHC = 112
-$CIN = 113
-$CLE = 114
-$COL = 115
-$DET = 116
-$HOU = 117
-$KC	 = 118
-$LAD = 119
-$WSH = 120
-$NYM = 121
-$OAK = 133
-$PIT = 134
-$SD	 = 135
-$SEA = 136
-$SF	 = 137
-$STL = 138
-$TB	 = 139
-$TEX = 140
-$TOR = 141
-$MIN = 142
-$PHI = 143
-$ATL = 144
-$CWS = 145
-$MIA = 146
-$NYY = 147
-$MIL = 148
+$teamIDsTable = @{108="LAA";
+                  109="ARI";
+                  110="BAL";
+                  111="BOS";
+                  112="CHC";
+                  113="CIN";
+                  114="CLE";
+                  115="COL";
+                  116="DET";
+                  117="HOU";
+                  118="KC";
+                  119="LAD";
+                  120="WSH";
+                  121="NYM";
+                  133="OAK";
+                  134="PIT";
+                  135="SD";
+                  136="SEA";
+                  137="SF";
+                  138="STL";
+                  139="TB";
+                  140="TEX";
+                  141="TOR";
+                  142="MIN";
+                  143="PHI";
+                  144="ATL";
+                  145="CWS";
+                  146="MIA";
+                  147="NYY";
+                  148="MIL"}
 
 # Delimeters and other common symbols
 $delimiter = [char]0x2502 # This is the Unicode box vertical, which is a nice, neat divider
@@ -99,7 +99,7 @@ $lineMax = 90 # Breaks the info line under the linescore so it doesn't overrun t
 # The intended use is to determine the current day and date and let the script iterate over a live game a specific team is playing
 # It should stop when the live game is over
 # If the game is upcoming, it should output the teams playing and when the game will start
-$teamID = $NYM # Team codes and corresponding team IDs stored in the config
+$teamID = 121 # Team codes and corresponding team IDs stored in the config
 $MLB_today = Get-Date -format "MM/dd/yyyy"
 
 # Get the current gamePk, or game specific ID, based on the team and date set above
